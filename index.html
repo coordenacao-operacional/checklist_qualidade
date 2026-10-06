@@ -192,7 +192,7 @@ table.res td.r,table.res th.r{text-align:right}
 <iframe name="hiddenSendFrame" id="hiddenSendFrame" title="envio" style="display:none"></iframe>
 <form id="pdfSendForm" method="POST" target="hiddenSendFrame" style="display:none">
   <input type="hidden" name="unidade"><input type="hidden" name="gestor"><input type="hidden" name="mes"><input type="hidden" name="auditor">
-  <input type="hidden" name="resultadoBP"><input type="hidden" name="resultadoEF"><input type="hidden" name="resumo"><input type="hidden" name="obsGeral">
+  <input type="hidden" name="resultadoBP"><input type="hidden" name="resultadoEF"><input type="hidden" name="resumo"><input type="hidden" name="obsGeral"><input type="hidden" name="dados">
   <input type="hidden" name="filename"><input type="hidden" name="pdfBase64">
 </form>
 
@@ -380,7 +380,8 @@ function submit(){
   const set=(n,v)=>{f.elements[n].value=v;};
   set("unidade",I.unidade.trim());set("gestor",I.gestor);set("mes",I.mes);set("auditor",I.auditor);
   set("resultadoBP",fmtPct(bp.pct)+" - "+band(bp.pct).lab);set("resultadoEF",fmtPct(ef.pct)+" - "+band(ef.pct).lab);
-  set("resumo",resumo);set("obsGeral",S.obsGeral||"");set("filename",fname);set("pdfBase64",doc.output("datauristring"));
+  set("resumo",resumo);
+  set("dados",JSON.stringify(["bp","ef"].map(p=>{const R=scorePart(p);return {nome:PARTS[p].name,pct:R.pct,lab:band(R.pct).lab,secs:PARTS[p].s.map((s,si)=>({nome:cap(s.t),pct:R.secs[si].pct,zerada:!!R.secs[si].zeroed}))};})));set("obsGeral",S.obsGeral||"");set("filename",fname);set("pdfBase64",doc.output("datauristring"));
   let done=false; const fr=$("#hiddenSendFrame");
   const finish=()=>{if(done)return;done=true;btn.disabled=false;btn.textContent="Enviar por e-mail (PDF)";
     msg.innerHTML=`<div class="msg ok">Checklist enviado para a coordenação. Resultado BP ${fmtPct(bp.pct)} · EF ${fmtPct(ef.pct)}.</div><div class="actions" style="margin-top:10px"><button class="btn" id="newA">Iniciar nova auditoria</button></div>`;
@@ -406,20 +407,21 @@ function buildPdf(A){
       styles:{fontSize:8.5,cellPadding:1.8},headStyles:{fillColor:BR},columnStyles:{1:{halign:"right",cellWidth:24},2:{halign:"right",cellWidth:20}},margin:{left:M,right:M},
       didParseCell:d=>{if(d.section==="body"&&d.column.index===2){d.cell.styles.textColor=col(R.secs[d.row.index].pct);d.cell.styles.fontStyle="bold";}}});
     for(const [si,s] of part.s.entries()){
-      const r=R.secs[si];
-      doc.autoTable({startY:doc.lastAutoTable.finalY+6,head:[[{content:`${cap(s.t)} - ${fmtPct(r.pct)}`,colSpan:3}],["Item","Aval.","Observação"]],
-        body:s.q.map((q,qi)=>{const id=qid(p,si,qi),v=A.ans[id];const g=s.gold&&s.gold.includes(qi+1)?" [Regra de ouro]":"";const nf=(A.fotos[id]||[]).filter(Boolean).length;return [`${qi+1}. ${q}${g}`,v===undefined?"-":v==="na"?"N/A":String(v),(A.obs[id]||"")+(nf?`${A.obs[id]?"\n":""}(${nf} foto${nf>1?"s":""})`:"")];}),
+      const r=R.secs[si]; const body=[], photoRows={};
+      const GAP=4, PW=(W-2*M-4-GAP)/2, PHMAX=72;
+      s.q.forEach((q,qi)=>{const id=qid(p,si,qi),v=A.ans[id];const g=s.gold&&s.gold.includes(qi+1)?" [Regra de ouro]":"";
+        body.push([`${qi+1}. ${q}${g}`,v===undefined?"-":v==="na"?"N/A":String(v),A.obs[id]||""]);
+        const fs=(A.fotos[id]||[]).filter(Boolean);
+        for(let k=0;k<fs.length;k+=2){const pair=fs.slice(k,k+2).map(src=>{let pr;try{pr=doc.getImageProperties(src);}catch(e){return null;}const sc=Math.min(PW/pr.width,PHMAX/pr.height);return {src,w:pr.width*sc,h:pr.height*sc};}).filter(Boolean);
+          if(!pair.length)continue; const h=Math.max(...pair.map(x=>x.h));
+          photoRows[body.length]=pair; body.push([{content:"",colSpan:3,styles:{minCellHeight:h+4,cellPadding:2}}]);}
+      });
+      doc.autoTable({startY:doc.lastAutoTable.finalY+6,head:[[{content:`${cap(s.t)} - ${fmtPct(r.pct)}`,colSpan:3}],["Item","Aval.","Observação"]],body,rowPageBreak:"avoid",
         styles:{fontSize:7.8,cellPadding:1.6,valign:"top"},headStyles:{fillColor:BR},columnStyles:{0:{cellWidth:112},1:{halign:"center",cellWidth:14,fontStyle:"bold"}},margin:{left:M,right:M},
-        didParseCell:d=>{if(d.section==="body"&&d.column.index===1){const t=d.cell.raw;d.cell.styles.textColor=t==="0"?[179,38,30]:t==="1"?[31,122,63]:[110,110,110];}}});
+        didParseCell:d=>{if(d.section==="body"&&d.column.index===1&&!photoRows[d.row.index]){const t=d.cell.raw;d.cell.styles.textColor=t==="0"?[179,38,30]:t==="1"?[31,122,63]:[110,110,110];}},
+        didDrawCell:d=>{if(d.section!=="body"||d.column.index!==0)return;const pair=photoRows[d.row.index];if(!pair)return;
+          let x=d.cell.x+2;for(const im of pair){try{doc.addImage(im.src,"JPEG",x,d.cell.y+2,im.w,im.h);}catch(e){}x+=PW+GAP;}}});
     }
-  }
-  // fotos
-  const fotoList=[];["bp","ef"].forEach(p=>PARTS[p].s.forEach((s,si)=>s.q.forEach((q,qi)=>{const id=qid(p,si,qi);(A.fotos[id]||[]).forEach(src=>{if(src)fotoList.push({src,cap:`${PARTS[p].name} · ${cap(s.t)} · item ${qi+1}`,obs:A.obs[id]||""});});})));
-  if(fotoList.length){doc.addPage();let yy=head("REGISTRO FOTOGRÁFICO","");const cw=(W-2*M-6)/2,ch=62;let c=0;
-    for(const f of fotoList){if(yy+ch+12>285){doc.addPage();yy=head("REGISTRO FOTOGRÁFICO","");c=0;}
-      const x=M+c*(cw+6);try{const pr=doc.getImageProperties(f.src);const k=Math.min(cw/pr.width,ch/pr.height);doc.addImage(f.src,"JPEG",x,yy,pr.width*k,pr.height*k);}catch(e){}
-      doc.setFontSize(7.5);doc.text(doc.splitTextToSize(f.cap+(f.obs?" - "+f.obs:""),cw).slice(0,2),x,yy+ch+4);
-      c++;if(c===2){c=0;yy+=ch+12;}}
   }
   // resumo + assinaturas
   doc.addPage();let yy=head("CONCLUSÃO","");
