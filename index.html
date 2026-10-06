@@ -1,0 +1,446 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Checklist Geral de Auditoria</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: prancheta de auditoria — cabeçalho fixo com nota ao vivo, abas por relatório, cartões de seção empilhados (mobile primeiro) */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --sunk:#e8ecea; --fg:#17201d; --muted:#5b6762; --line:#d5dcd8;
+  --accent:#0d5c55; --accent-ink:#ffffff; --accent-soft:#d8ebe8;
+  --ok:#1f7a3f; --ok-soft:#dcf0e2; --bad:#b3261e; --bad-soft:#f8dedb; --warn:#9a6200; --warn-soft:#fbecc8; --na:#5b6762; --na-soft:#e4e8e6;
+  --gold:#a8790f;
+  --f-display:"Bricolage Grotesque",system-ui,sans-serif; --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101614; --surface:#18201d; --sunk:#202a26; --fg:#e6ece9; --muted:#9aa8a2; --line:#2e3a35;
+  --accent:#5cc2b6; --accent-ink:#06201d; --accent-soft:#183a36;
+  --ok:#6fd08f; --ok-soft:#173523; --bad:#ff8a80; --bad-soft:#3d1b19; --warn:#f2bf55; --warn-soft:#3a2d10; --na:#a6b1ac; --na-soft:#26302c; --gold:#e3b24a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101614; --surface:#18201d; --sunk:#202a26; --fg:#e6ece9; --muted:#9aa8a2; --line:#2e3a35;
+  --accent:#5cc2b6; --accent-ink:#06201d; --accent-soft:#183a36;
+  --ok:#6fd08f; --ok-soft:#173523; --bad:#ff8a80; --bad-soft:#3d1b19; --warn:#f2bf55; --warn-soft:#3a2d10; --na:#a6b1ac; --na-soft:#26302c; --gold:#e3b24a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:0 96px}
+.wrap{max-width:820px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin-inline:-16px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
+.top-row{display:flex;align-items:center;gap:12px;justify-content:space-between;max-width:820px;margin:0 auto}
+.brand{min-width:0}
+.brand small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.brand h1{font-size:19px}
+.score{display:flex;align-items:baseline;gap:6px;padding:6px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);white-space:nowrap}
+.score b{font-family:var(--f-mono);font-size:17px}
+.score span{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:4px;max-width:820px;margin:8px auto 0;overflow-x:auto;scrollbar-width:none}
+.tab{border:0;background:none;padding:9px 12px;color:var(--muted);font-weight:600;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tab .pill{font-family:var(--f-mono);font-size:11px;margin-left:6px;color:var(--muted)}
+.progress{height:3px;background:var(--sunk);margin-inline:-16px}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+
+/* forms */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
+input[type=text],input[type=month],textarea,select{font:15px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 11px;width:100%;text-transform:none;letter-spacing:0}
+textarea{resize:vertical;min-height:44px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted);margin-top:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+section.stack{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+
+/* sections */
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.sec-h{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border:0;background:none;width:100%;text-align:left;color:var(--fg)}
+.sec-h h3{font-size:15px;letter-spacing:.02em;min-width:0}
+.sec-h .meta{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sec-h .cnt{font-size:12px;color:var(--muted)}
+.chev{transition:transform .2s;color:var(--muted)}
+.sec[data-open="false"] .chev{transform:rotate(-90deg)}
+.sec[data-open="false"] .qs{display:none}
+.rule{font-size:12.5px;color:var(--gold);padding:0 16px 10px;display:flex;gap:6px;align-items:flex-start}
+.badge{font-family:var(--f-mono);font-size:12px;padding:3px 8px;border-radius:999px;font-weight:500}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-warn{background:var(--warn-soft);color:var(--warn)}.b-bad{background:var(--bad-soft);color:var(--bad)}.b-na{background:var(--na-soft);color:var(--na)}
+.q{border-top:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.q[data-v="0"]{box-shadow:inset 3px 0 0 var(--bad)}
+.q[data-v="1"]{box-shadow:inset 3px 0 0 var(--ok)}
+.q[data-v="na"]{box-shadow:inset 3px 0 0 var(--na)}
+.qt{display:flex;gap:10px}
+.qn{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:2px;min-width:22px}
+.qt p{margin:0;min-width:0}
+.gold{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:2px}
+.ans{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:420px}
+.ans button{border:1.5px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:10px 6px;font-weight:600;font-size:14px;line-height:1.2}
+.ans button small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.ans button[aria-pressed="true"][data-v="1"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.ans button[aria-pressed="true"][data-v="0"]{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.ans button[aria-pressed="true"][data-v="na"]{background:var(--na-soft);border-color:var(--na);color:var(--na)}
+.ans button[aria-pressed="true"] small{color:inherit}
+.extra{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.extra textarea{flex:1 1 220px;min-height:42px;font-size:14px}
+.photo-btn{display:inline-flex;align-items:center;gap:6px;border:1.5px dashed var(--line);background:none;color:var(--muted);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;position:relative}
+.photo-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:1}
+
+/* summary */
+.sumhead{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.big{padding:18px}
+.big .lab{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.big .val{font-family:var(--f-display);font-size:40px;font-weight:700;line-height:1.1;margin-top:4px}
+.big .st{margin-top:6px}
+table.res{width:100%;border-collapse:collapse;font-size:14px}
+table.res td,table.res th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+table.res th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+table.res td.r,table.res th.r{text-align:right}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%}
+.tw{overflow-x:auto}
+.pend{font-size:13px;color:var(--warn);margin:8px 0 0}
+.pend button{border:0;background:none;color:var(--accent);text-decoration:underline;padding:0;font-size:13px}
+
+.member{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.member .sig{grid-column:1/-1}
+.sigpad{width:100%;height:120px;border:1px dashed var(--line);border-radius:8px;background:var(--surface);touch-action:none;display:block}
+.sigrow{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-top:4px}
+.link{border:0;background:none;color:var(--accent);font-weight:600;padding:4px 0;font-size:13px}
+.danger{color:var(--bad)}
+@media (max-width:520px){.member{grid-template-columns:1fr}}
+
+.btn{border:0;border-radius:10px;padding:13px 18px;font-weight:700;font-size:15px;background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sec2{background:var(--surface);color:var(--fg);border:1.5px solid var(--line)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted)}
+.msg{padding:12px 14px;border-radius:8px;font-size:14px}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}.msg.err{background:var(--bad-soft);color:var(--bad)}.msg.info{background:var(--accent-soft);color:var(--fg)}
+
+/* history */
+.hist{display:flex;flex-direction:column;gap:10px}
+.hi{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
+.hi h3{font-size:16px}
+.hi .sub{font-size:13px;color:var(--muted)}
+.hi .scores{display:flex;gap:6px;flex-wrap:wrap}
+.hi .acts{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap}
+.empty{text-align:center;padding:32px 16px;color:var(--muted)}
+.empty h3{color:var(--fg);font-size:18px;margin-bottom:6px}
+
+.fab{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);z-index:15}
+.fab .wrap{display:flex;gap:10px;justify-content:space-between;align-items:center}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+</style>
+</head>
+<body>
+
+
+<div class="top">
+  <div class="top-row">
+    <div class="brand"><small>NutriSaúde · FOR SGQ 22</small><h1>Checklist Geral de Auditoria</h1></div>
+    <div class="score" title="Resultado parcial de Boas Práticas"><b id="topScore" class="num">—</b><span>BP</span></div>
+  </div>
+  <div class="tabs" role="tablist">
+    <button class="tab" role="tab" data-tab="bp" aria-selected="true">Boas Práticas<span class="pill" id="pill-bp"></span></button>
+    <button class="tab" role="tab" data-tab="ef" aria-selected="false">Estrutura Física<span class="pill" id="pill-ef"></span></button>
+    <button class="tab" role="tab" data-tab="res" aria-selected="false">Resultado e envio</button>
+  </div>
+  <div class="progress"><i id="prog"></i></div>
+</div>
+
+<main class="wrap">
+  <section class="stack" id="identCard">
+    <div class="card">
+      <div class="grid">
+        <label class="f">Unidade<input type="text" id="f-unidade" list="units" autocomplete="off" placeholder="Ex.: BTG 8"></label>
+        <label class="f">Gestor(a) da unidade<input type="text" id="f-gestor" autocomplete="off"></label>
+        <label class="f">Mês/ano<input type="month" id="f-mes"></label>
+        <label class="f">Auditor(a)<input type="text" id="f-auditor" autocomplete="off" placeholder="Quem está aplicando"></label>
+      </div>
+      <datalist id="units"><option value="BTG 8"><option value="BTG 1"><option value="HWASHIN"><option value="Ribeirão"><option value="Reckitt"></datalist>
+      <div class="legend">
+        <span><i class="dot" style="background:var(--ok)"></i>1 = Conforme</span>
+        <span><i class="dot" style="background:var(--bad)"></i>0 = Não conforme</span>
+        <span><i class="dot" style="background:var(--na)"></i>N/A = Não aplicável</span>
+        <span><span class="gold" style="margin:0">Regra de ouro</span> se não conforme, zera a seção</span>
+      </div>
+    </div>
+  </section>
+
+  <section class="stack" id="view-bp"></section>
+  <section class="stack" id="view-ef" hidden></section>
+  <section class="stack" id="view-res" hidden></section>
+</main>
+
+<div class="fab" id="fab"><div class="wrap">
+  <span class="note" id="fabNote"></span>
+  <button class="btn" id="fabBtn">Próximo</button>
+</div></div>
+<div class="toast" id="toast" hidden></div>
+<iframe name="hiddenSendFrame" id="hiddenSendFrame" title="envio" style="display:none"></iframe>
+<form id="pdfSendForm" method="POST" target="hiddenSendFrame" style="display:none">
+  <input type="hidden" name="unidade"><input type="hidden" name="gestor"><input type="hidden" name="mes"><input type="hidden" name="auditor">
+  <input type="hidden" name="resultadoBP"><input type="hidden" name="resultadoEF"><input type="hidden" name="resumo"><input type="hidden" name="obsGeral">
+  <input type="hidden" name="filename"><input type="hidden" name="pdfBase64">
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+const DATA = [{"k": "bp", "code": "FOR SGQ 22 05", "plus": 1, "s": [{"t": "ARMAZENAMENTO EM TEMPERATURA AMBIENTE (ESTOQUE)", "q": ["Os produtos estão armazenados sobre paletes, prateleiras e/ ou estrados e respeitando as distâncias necessárias do forro, das paredes e do piso?", "Os produtos estão com as embalagens integras? (não estão furadas, amasadas ou estufadas)", "Produtos abertos estão armazenados evitando o risco de contaminação com as embalagens vedadas?", "Produtos abertos estão com as etiquetas preenchidas corretamente e completamente? As informações do fabricante estão sendo respeitadas?", "Produtos improprios para o consumo estão devidamente identificados e separados de outros produtos?", "Não há produtos com data de validade vencida? (produtos abertos a mais de um mês e produtos sem identificação são considerados com data de validade vencida). Obs.: Produto químicos/ limpeza também serão considerados na avaliação.", "O sistema semáforo/ PVPS está sendo aplicado com eficácia? O adesivo está visível a todos?", "Caixas de madeira ou papelão estão devidamente protegidas por saco plástico?", "Os gêneros estão armazenados no estoque de acordo com suas características e recomendações do fabricante?"], "gold": [6]}, {"t": "ARMAZENAMENTO EM TEMPERATURA CONTROLADA (FREEZE/GELADEIRA)", "q": ["Alimentos pré-preparados (carnes temperadas, sobremesas, saladas) são armazenados corretamente evitando contaminações?", "Alimentos pré-preparados (carnes temperadas, sobremesas, saladas) estão identificados? Etiquetas preenchidas corretamente e completamente? (situação válida também para produtos em descongelamento).", "Produtos abertos estão armazenados evitando o risco de contaminação? (embalagens vedadas)", "Produtos abertos estão com as etiquetas preenchidas corretamente e completamente? As informações do fabricante estão sendo respeitadas?", "Não há produtos com data de validade vencida? Produtos abertos a mais de um mês e sem identificação são considerados com data de validade vencida.", "Os gêneros estão armazenados no estoque de acordo com suas características e recomendações do fabricante?"], "gold": [5]}, {"t": "RECEBIMENTO", "q": ["O profissional que recebe as mercadorias tem conhecimento dos critérios de recebimento?", "São verificadas as condições do transporte e se a refrigeração do caminhão está ligadado até o momento da entrega?", "Os visitantes (forncedores, entregadores e prestadores de serviços) seguem orientações sanitárias quando entram na cozinha? Não há cruzamento de pessoas sem uniforme no interior da cozinha?", "Produtos para devolução são devolvidos imediatamente ou identificados e guardados em local específico sinalizado?"]}, {"t": "PRÉ-PREPARO/PREPARO", "q": ["A desinfecção de hortifruti está sendo feita de maneira correta? Há relógio ou outra forma de controle do tempo de contato (temporizador)?", "Existe adesivo com o passo a passo da desinfecção de hortifruti? As orientações correspondem ao produto utilizado? Ele está em local estratégico?", "O descongelamento de carnes é feito sob refrigeração?", "As caixas plásticas/ cubas para descongelamento ou desinfecção de hortifruti estão identificadas? As caixas são exclusivas para este procedimento?", "A manipulação de carnes não excede mais que 30 minutos em temperatura ambiente? É feita em lote?", "Os procedimentos de pré-preparo evitam a contaminação cruzada entre alimentos crus, semi preparados e prontos para o consumo?", "No preparo de carnes (chapa) são usados dois pegadores (carne crua/ carne grelhada) ou luva descartável (usada de forma correta e descartada na troca de função)? Na mesma chapa não são colocadas carnes cruas com carnes já grelhadas?", "Os alimentos prontos são manipulados com utilização de luvas descartáveis? As luvas são usadas da forma correta e descartadas imediatamente após o uso ou troca de função?", "Existe ausência de alimentos preparados em temperatura ambiente por mais de 30 minutos?", "As cores das tábuas são respeitadas? (verde: hortifruti, vermelha: carnes em geral, branca: alimentos prontos)", "As preparações não estão ficando prontas com muita antecedência?"], "gold": [3]}, {"t": "DISTRIBUIÇÃO", "q": ["Os alimentos em espera para distribuição estão protegidos contra contaminações?", "Os alimentos aguardam a distribuição em equipamento que conserve a sua temperatura na faixa de segurança? (câmara, geladeira, passthrough, banho-maria, forno?).", "Os balcões são ligados com antecedência para atingir a temperatura adequada? Os balcões estão funcionando?", "Existe procedimento para evitar a contaminação dos alimentos durante a distribuição? Na interrupção da fila as cubas/ panelas são mantidas tampada?", "Não existem indícios/ sinais de reaproveitamento de alimentos? Não há alimentos prontos do cardápio ou turno anterior na câmara ou passthrough? (Por exemplo: usar alimentos no jantar que foram produzidos no almoço, caracteriza reaproveitamentos)", "A temperatura dos alimentos é mantida até o final da distribuição?", "Os itens programados foram suficiente até final da distribuição? Não houve substituição do cardápio principal apresentado ao cliente?"], "gold": [5]}, {"t": "COLETA DE AMOSTRAS", "q": ["Há coleta de todos os itens de todos os dias e todos os turnos?", "O procedimento de coleta de amostra está sendo realizada de maneira correta? O preenchimento das informações do saco de amostras estão corrretas ? As amostras possuem 100 gramas?", "O armazenamento das amostras está correto? O prazo de 96h (SP) ou 72h (a depender do MBP) de armazenamento está sendo respeitado?"], "gold": [1]}, {"t": "EQUIPAMENTOS, MÓVEIS E UTENSÍLIOS", "q": ["As tábuas de corte estão em bom estado de conservação e limpeza?", "As panelas, assadeiras, pegadores, canecões, cubas estão sem incrustações e bom estado de conservação?", "As prateleiras (estoque e produção) estão em bom estado de conservação e sem amassados e ou ferrugem?", "O sistema de exaustão (coifas/ exastores de parede) estão funcionando?", "Os equipamentos de refrigeração (geladeiras/ freezer) estão em bom estado de conservação (prateleiras/ assoalho sem ferrugem, borrachas de vedação em boas condições)?", "A balança está conservada (sem ferrugem e descascamento) e em boas condições de higiene? Está em local fixo? Está adequada para pesagem dos produtos recebidos?"]}, {"t": "LIMPEZA E ORGANIZAÇÃO", "q": ["Todos os locais são mantidos limpos e organizados (atrás de equipamentos, bancadas, tomadas, interruptores, portas e prateleiras)?", "As esponjas estão bom estado de conservação? Estão armazenadas em local limpo e seco?", "O restaurante está sendo limpo (inclusive durante a distribuição)?", "Há borrifadores em todas as áreas ? São mantidos limpos? Estão identificados com etiquetas?", "O estoque está organizado e limpo (piso, prateleiras, paredes e embalagens?", "Sanitários e vestiários estão limpos e organizados?", "Mesa e materiais de uso da gestora estão em boas condições de limpeza e organização?", "Vassouras e outros utensílios de limpeza estão em bom estado? Guardados em local adequado e são diferentes dos usados em vestiários e sanitários?", "Aventais são guardados em locais próprios?", "É feita a desinfecção com álcool 70% das bancadas e demais superfícies?", "Armadilhas de pisos estão protegidas? Armadilhas luminosas/ cola/ elétricas estão limpas e em bom estado?", "Cortinas/ exaustores de ar estão em bom estado de limpeza e funcionamento?", "Não existem caixas de papelão, materiais de madeira ou caixas plásticas (fornecedores) sujas no interior da cozinha?", "A pia de higiene das mãos está em boas condições de higiene? Está abastecida com todos os itens necessários? Há adesivo com orientações?", "A luva de malha de aço está sendo higienizada de acordo com o MBP? (sem resíduos de alimentos). Está armazenada em local limpo e seco?", "A geladeira/ câmara/ freezer/ câmara fria estão em boas condições de higiene?", "Equipamentos que não estão sendo usados são mantidos cobertos com saco plástico?", "Os equipamentos em geral estão em bom estado de conservação e limpeza? (cabrita, descascador/ processador de legumes, coifa sem gotejamento de gordura, bicos do fogão, forno, fogão, etc.)", "A caixa/ cuba onde são guardados os utensílios na produção e distribuição estão limpas? (sem acúmulo de água e resíduos)", "Os termômetro estão em boas condições de higiene? São guardados em local apropriado e exclusivo?", "Os hortifrutis são transferidos para caixas plástica previamente higienizadas?"], "min": 16}, {"t": "MANIPULADORES", "q": ["Há ausência de profissionais com ferimentos nas mãos e/ ou micose nas unhas?", "Os profissionais e gestora não usam adornos (esmalte, extensão de unha/ unha postiça, aliança, brinco, piercing, maquiagem ou cílios postiços/extensões)? Usam corretamente a poteção para os cabelos?", "Todos os profissionais estão uniformizados (uniforme completo)? O uniforme é mantido limpo?", "Os profissionais não falam, cantam, espirram sobre as preparações? Eles não comem durante a produção de alimentos?", "Há frequência na higiene das mãos? (Seguindo o procedimento como descrito no cartaz)."]}, {"t": "MANEJO DE RESÍDUOS", "q": ["Os coletores de lixo estão limpos, em locais adequados, com sacos plásticos resistentes e pedais funcionando?", "Quando há cruzamento da saída do lixo e matérias-primas são determinados horários diferentes? Os lixos são retirados com frequência?", "O óleo usado é recolhido por fornecedor autorizado? Há recibo de coleta com data e quantidade coletada?"]}, {"t": "PREENCHIMENTO DE PLANILHAS", "q": ["O FOR PRD 02 - Recebimento de Perecíveis está sendo preenchida completamente e corretamente (sem preenchimento britânico)? As conferências necessárias (validade, temperatura de perecíveis, teste de amônia e avaliação sensorial) são realizadas?", "O FOR PRD 10 - Controle de Temperatura de Equipamentos: está sendo preenchida corretamente e completamente (sem preenchimento britânico)?", "O FOR PRD 11 - Controle de Temperatura de Alimentos em Distribuição está sendo preenchida corretamente e completamente (sem preenchimento britânico)? As anotações correspondem ao que foi produzido no dia?", "O FOR PRD 14 - Controle de Temperatura de Alimentos em Produção está sendo preenchida corretamente e completamente (sem preenchimento britânico)? As anotações correspondem ao que foi produzido no dia?", "O FOR PRD 05 - Avaliação Sensorial está preenchida corretamente em todos os períodos? As anotações correspondem ao que foi produzido no dia?", "FOR PRD 21 - Controle de sobra Limpa e Resto Injesta: está sendo preenchida corretamente e completamente (sem preenchimento britânico)?", "FOR PRD 01/ 03/ 09 - Controle de Rotina de Limpeza: estão preenchido completamento e corretamente (sem preenchimento britânico)?", "FOR PRD 06 - Controle de Diluição de Produtos de Limpeza: está sendo preenchida?"], "gold": [2, 3, 4, 7]}, {"t": "SEGURANÇA DO TRABALHO", "q": ["O PGR e PCMSO estão atualizados e arquivados na unidade (aquivo físico ou drive)?", "Todos os profissionais utilizam os EPI's durante as atividades?", "A Ficha de controle de EPI's e uniformes está preenchida corretamente através do sistema Onsafety?", "As FDS's estão em local de fácil acesso para a equipe? Há relação entre a FDS's e os produtos que estão na unidade?", "O FOR SST 18 - As O.S. Estão assinadas em todas as páginas? Fazem parte da pasta dos profissionais? É realizada nova O.S para o caso de mudança de função?", "Os exames de ASO estão em dia e arquivados na pasta dos profissionais? Condizem com a função exercida?", "Os EPIs estão armazenados corretamente? O local para rmazenamento de EPI está devidamente higienizado? Estão em boas condições de uso e limpeza?"]}, {"t": "LAUDOS", "q": ["O laudo de análise de água está vigente? Está de acordo com a legislação?", "O laudo de limpeza do reservatório de água está vigente?", "O laudo de realização do controle de pragas esta vigente?", "O laudo de calibração de termômetro está vigente?", "O laudo de limpeza da caixa de gordura está vigente?", "Os documentos da empresa de coleta de óleo estão vigentes?", "O laudo da limpeza da coifa está vigente?", "O Alvará de licença sanitária está vigente?", "Os laudos de limpeza de ar condicionado e cortina de ar estão vigentes?"], "gold": [1, 2, 3]}, {"t": "TREINAMENTOS", "q": ["As listas de presença em treinamentos estão sendo preenchidas corretamente e completamente através do Sistema Onsafety?", "Há correspondência entre os registros de lista de presença com a planilha FOR GP 08 (Fechamento de Horas de Treinamento)?", "Os treinamentos enviados mensalmente pela área da qualidade estão sendo aplicados (4 treinamentos mensais)?", "Existem evidências de treinamentos sobre uso correto de EPI's? (com a equipe que está na unidade atualmente)?", "Os profissionais são treinados sobre as FDS's?", "Os profissionais conhecem a polìtica de Qualidade da Nutrisaude?", "Há evidência de treinamento de integração dos novos profissionais?"]}, {"t": "AMBIENTAÇÃO/PESQUISA/APRESENTAÇÃO", "q": ["O restaurante de maneira geral, está em boas condições de limpeza (mesas, piso, paredes, janelas, luminárias e proteção do balcão)?", "O balcão de distribuição é mantido limpo e organizado durante todo período de distribuição?", "Os pratos, talheres e bandejas estão bem higienizados e secos?", "As preparações estão dispostas de maneira organizada? Elas se mantéem organizadas até o final de distibuição?", "Os vidros de temperos estão limpos, organizados e etiquetados?", "Foi realizada a pesquisa de satisfação do consumidor na unidade? Está dentro da meta?", "Foi realizada a pesquisa de satisfação do interlocutor na unidade? Está dentro da meta?"]}]}, {"k": "ef", "code": "FOR SGQ 22 04", "plus": 0, "s": [{"t": "LOCALIZAÇÃO", "q": ["A área externa está livre de objetos em desuso, acúmulo de lixo, entulhos, etc.?"]}, {"t": "INSTALAÇÕES", "q": ["A área de produção é projetada para possibilitar um fluxo ordenado e sem cruzamentos em todas as etapas do processo produtivo (recebimento, armazenamento, pré-preparo, preparo, distribuição, manejo de resíduos)?", "Existe local exclusivo (lavanderia) para higienização de materiais de limpeza (baldes, vassouras, panos de chão)?", "A área de produção é separada por meios físicos ou outro meio para evitar o cruzamento de atividades e contaminação cruzada?", "As instalações elétricas estão embutidas ou protegidas em tubulações externas e íntegras de tal forma a permitir a higienização dos ambientes?", "Há pias exclusivas para a higiene das mãos?", "O retorno de utensílios sujos (devolução) não oferece risco de contaminação dos utensílios limpos?", "Pias para higiene de utensílios estão em boas condições de uso (sem rachaduras, vazamentos)?", "Os encanamentos (escoamento) das pias de higiene de utensílios estão em boas condições de uso (sem entupimentos, retorno de resíduos)? As tubulações são compatíveis com as atividades da unidade?"]}, {"t": "PISOS", "q": ["Possui revestimento liso, impermeável e lavável? Estão íntegros, conservados, livres de rachaduras, trincas, vazamentos, infiltrações?", "Os ralos possuem fechamento automático. Estão em número suficiente?"]}, {"t": "PAREDES", "q": ["Possui revestimento liso, impermeável e lavável. Estão íntegras, conservadas, livres de rachaduras, trincas, goteiras, vazamentos, infiltrações, bolores, descascamentos?"]}, {"t": "TETO", "q": ["Possui revestimento liso, impermeável e lavável? Estão íntegros, conservados, livres de rachaduras, trincas, vazamentos, infiltrações?"]}, {"t": "PORTAS", "q": ["As portas são mantidas ajustadas aos batentes? Possuem mecanismo de fechamento automático? Há proteção na parte inferior, contra insetos e roedores? Estão em bom estado de conservação? Possuem telas de proteção?"]}, {"t": "JANELAS", "q": ["São mantidas ajustadas aos batentes? Possuem telas milimétricas? Estão em bom estado de conservação? As telas são removíveis para limpeza?"]}, {"t": "ILUMINAÇÃO", "q": ["A iluminação da área de preparação é adequada? O ambiente não é escuro causando ofuscamentos?", "Os raios solares não incedem diretamente nas bancadas?", "As luminárias localizadas sobre a área de preparação dos alimentos estão protegidas contra explosão ou queda acidental?"]}, {"t": "VENTILAÇÃO", "q": ["A ventilação natural ou artificial é adequada (de forma a não permitir gases, fumaça, condensação de vapores, ou o surgimento de fungos ou bolores)?", "Os equipamentos de ventilação (coifa, exaustores) estão em bom estado de conservação e limpeza? Estão funcionando?"]}, {"t": "INSTALAÇÕES SANITÁRIAS", "q": ["São dotadas de lavatórios, com acessórios para higienização das mãos (sabonete líquido antisséptico ou sabonete líquido e produto antisséptico e toalhas de papel não reciclado)? Possuem lixeiras dotadas de sacos plásticos e tampa com acionamento por pedal?", "Não se comunicam diretamente com a área de produção e armazenamento de alimentos?", "São separadas por gênero? Possui armários individuais? Possui chuveiros? São de uso exclusivo dos funcionários da Nutrisaude?"]}, {"t": "ESTOQUE", "q": ["O local é exclusivo para armazenamento de alimentos?", "O espaço físico é suficiente para armazenar os alimentos??", "As prateleiras e/ou estrados são de material liso, resistente e impermeáveis e não apresentam pontos de ferrugem?"]}, {"t": "MANEJO DE RESÍDUOS", "q": ["Os resíduos (lixo) são armazenados em local fechado e isolado da área de preparação e armazenamento dos alimentos?"]}]}];
+const PARTS = {bp:DATA[0], ef:DATA[1]};
+PARTS.bp.name="Boas Práticas"; PARTS.bp.title="Relatório Técnico de Boas Práticas";
+PARTS.ef.name="Estrutura Física"; PARTS.ef.title="Relatório de Estrutura Física";
+const DRAFT_KEY="ckga-draft-v1";
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??"").replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const cap=s=>s.toLowerCase().replace(/(^|[\s\/(-])(\p{L})/gu,(m,a,b)=>a+b.toUpperCase()).replace(/ (E|De|Da|Do|Dos|Das|Em|Para) /g,w=>w.toLowerCase());
+
+// ---------- state ----------
+let S = blank();
+function blank(){return {ident:{unidade:"",gestor:"",mes:new Date().toISOString().slice(0,7),auditor:""},ans:{},obs:{},fotos:{},comite:[{nome:"",funcao:"",sig:""}],obsGeral:""};}
+function qid(p,si,qi){return `${p}-${si}-${qi}`;}
+try{const d=JSON.parse(localStorage.getItem(DRAFT_KEY)||"null"); if(d&&d.ans) S=Object.assign(blank(),d);}catch(e){}
+let saveT; function saveDraft(){clearTimeout(saveT);saveT=setTimeout(()=>{try{localStorage.setItem(DRAFT_KEY,JSON.stringify(S));}catch(e){try{const t=Object.assign({},S,{fotos:{}});localStorage.setItem(DRAFT_KEY,JSON.stringify(t));}catch(_){}}},400);}
+
+// ---------- scoring (mesmas fórmulas da planilha) ----------
+function scoreSection(p,si,ans=S.ans){
+  const sec=PARTS[p].s[si]; let C=0,D=0,answered=0;
+  sec.q.forEach((_,qi)=>{const v=ans[qid(p,si,qi)]; if(v!==undefined)answered++; if(v===0||v===1){C++;D+=v;}});
+  let zeroed=null;
+  if(sec.gold){for(const g of sec.gold){if(ans[qid(p,si,g-1)]===0){zeroed=`Regra de ouro: item ${g} não conforme`;break;}}}
+  if(sec.min && C>0 && D<sec.min){zeroed=`Mínimo de ${sec.min} itens conformes não atingido`;}
+  if(zeroed)D=0;
+  return {C,D,pct:C?D/C:null,answered,total:sec.q.length,zeroed};
+}
+function scorePart(p,ans=S.ans){
+  let C=0,D=0,answered=0,total=0; const secs=PARTS[p].s.map((_,si)=>{const r=scoreSection(p,si,ans);C+=r.C;D+=r.D;answered+=r.answered;total+=r.total;return r;});
+  const plus=PARTS[p].plus; const pct=C?(D+plus)/(C+plus):null;
+  return {secs,C,D,pct,answered,total};
+}
+function band(pct){if(pct==null)return{cls:"b-na",lab:"Sem avaliação",col:"var(--na)"}; if(pct<0.5)return{cls:"b-bad",lab:"Inaceitável",col:"var(--bad)"}; if(pct<0.85)return{cls:"b-warn",lab:"Pode gerar riscos",col:"var(--warn)"}; return{cls:"b-ok",lab:"Dentro da meta",col:"var(--ok)"};}
+const fmtPct=p=>p==null?"—":(p*100).toFixed(1).replace(".",",")+"%";
+
+// ---------- render checklist ----------
+const openState={};
+function renderPart(p){
+  const el=$("#view-"+p); const part=PARTS[p];
+  el.innerHTML=`<div class="card" style="padding:12px 16px"><h2 style="font-size:17px">${esc(part.title)}</h2><div class="note">${esc(part.code)} · ${part.s.length} seções · ${part.s.reduce((a,s)=>a+s.q.length,0)} itens</div></div>`+
+  part.s.map((sec,si)=>{
+    const key=p+si; const open=openState[key]??(si===0);
+    const rule=sec.gold?`<div class="rule">★ Regra de ouro: ${sec.gold.length>1?"itens":"item"} ${sec.gold.join(", ")} — se não conforme, a seção vale 0.</div>`:sec.min?`<div class="rule">★ A seção só pontua com pelo menos ${sec.min} itens conformes.</div>`:"";
+    return `<div class="sec" data-open="${open}" id="sec-${key}">
+      <button class="sec-h" data-toggle="${key}" aria-expanded="${open}"><h3>${esc(cap(sec.t))}</h3><span class="meta"><span class="cnt num" id="cnt-${key}"></span><span class="badge" id="bdg-${key}"></span><svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></button>
+      <div class="qs">${rule}${sec.q.map((q,qi)=>{const id=qid(p,si,qi);const isG=sec.gold&&sec.gold.includes(qi+1);return `
+        <div class="q" id="q-${id}" data-v="${S.ans[id]===undefined?"":S.ans[id]}">
+          <div class="qt"><span class="qn">${qi+1}.</span><p>${esc(q)}${isG?'<span class="gold">Regra de ouro</span>':""}</p></div>
+          <div class="ans" role="group" aria-label="Avaliação do item ${qi+1}">
+            ${[[1,"1","Conforme"],[0,"0","Não conforme"],["na","N/A","Não se aplica"]].map(([v,l,s])=>`<button data-q="${id}" data-v="${v}" aria-pressed="${S.ans[id]===v}">${l}<small>${s}</small></button>`).join("")}
+          </div>
+          <div class="extra">
+            <textarea id="obs-${id}" data-obs="${id}" rows="1" placeholder="Observação">${esc(S.obs[id]||"")}</textarea>
+            <span class="photo-btn"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 8h3l2-3h6l2 3h3v11H4z"/><circle cx="12" cy="13" r="3.5"/></svg>Foto<input type="file" accept="image/*" capture="environment" data-foto="${id}" aria-label="Adicionar foto ao item ${qi+1}"></span>
+          </div>
+          <div class="thumbs" id="th-${id}">${thumbs(id)}</div>
+        </div>`;}).join("")}</div></div>`;
+  }).join("");
+  part.s.forEach((_,si)=>updSec(p,si));
+}
+function thumbs(id){return (S.fotos[id]||[]).map((src,i)=>`<div class="thumb"><img src="${src}" alt="Foto ${i+1}"><button data-delfoto="${id}" data-i="${i}" aria-label="Remover foto">×</button></div>`).join("");}
+function updSec(p,si){
+  const r=scoreSection(p,si),key=p+si,b=band(r.C?r.pct:null);
+  const c=$("#cnt-"+key); if(c)c.textContent=`${r.answered}/${r.total}`;
+  const bd=$("#bdg-"+key); if(bd){bd.className="badge "+(r.answered?b.cls:"b-na");bd.textContent=r.C?fmtPct(r.pct):"—";}
+}
+function updTop(){
+  const bp=scorePart("bp"),ef=scorePart("ef");
+  $("#topScore").textContent=fmtPct(bp.pct);
+  $("#pill-bp").textContent=`${bp.answered}/${bp.total}`;$("#pill-ef").textContent=`${ef.answered}/${ef.total}`;
+  $("#prog").style.width=((bp.answered+ef.answered)/(bp.total+ef.total)*100)+"%";
+}
+
+// ---------- events ----------
+document.addEventListener("click",e=>{
+  const t=e.target.closest("button"); if(!t)return;
+  if(t.dataset.q){const id=t.dataset.q;let v=t.dataset.v;v=v==="na"?"na":+v;
+    if(S.ans[id]===v)delete S.ans[id]; else S.ans[id]=v;
+    const q=$("#q-"+id);q.dataset.v=S.ans[id]===undefined?"":S.ans[id];
+    q.querySelectorAll(".ans button").forEach(b=>{const bv=b.dataset.v==="na"?"na":+b.dataset.v;b.setAttribute("aria-pressed",S.ans[id]===bv);});
+    const [p,si]=id.split("-");updSec(p,+si);updTop();saveDraft();return;}
+  if(t.dataset.toggle){const k=t.dataset.toggle,s=$("#sec-"+k),o=s.dataset.open!=="true";s.dataset.open=o;t.setAttribute("aria-expanded",o);openState[k]=o;return;}
+  if(t.dataset.delfoto){const id=t.dataset.delfoto;S.fotos[id].splice(+t.dataset.i,1);if(!S.fotos[id].length)delete S.fotos[id];$("#th-"+id).innerHTML=thumbs(id);saveDraft();return;}
+  if(t.dataset.tab){go(t.dataset.tab);return;}
+  if(t.dataset.goto){const [p,si]=t.dataset.goto.split(":");openState[p+si]=true;go(p);const s=$("#sec-"+p+si);s.dataset.open=true;s.scrollIntoView({behavior:"smooth",block:"start"});return;}
+});
+document.addEventListener("input",e=>{
+  const t=e.target;
+  if(t.dataset.obs){S.obs[t.dataset.obs]=t.value;if(!t.value)delete S.obs[t.dataset.obs];saveDraft();}
+  else if(t.id&&t.id.startsWith("f-")){S.ident[t.id.slice(2)]=t.value;saveDraft();}
+  else if(t.id==="obsGeral"){S.obsGeral=t.value;saveDraft();}
+  else if(t.dataset.cm){const [i,f]=t.dataset.cm.split(":");S.comite[+i][f]=t.value;saveDraft();}
+});
+document.addEventListener("change",async e=>{
+  const t=e.target; if(!t.dataset.foto||!t.files.length)return;
+  const id=t.dataset.foto;
+  for(const f of t.files){try{const d=await compress(f);(S.fotos[id]=S.fotos[id]||[]).push(d);}catch(err){toast("Não foi possível ler essa imagem.");}}
+  t.value="";$("#th-"+id).innerHTML=thumbs(id);saveDraft();
+});
+function compress(file,max=1100,q=0.62){return new Promise((res,rej)=>{const r=new FileReader();r.onload=()=>{const img=new Image();img.onload=()=>{let w=img.width,h=img.height;const k=Math.min(1,max/Math.max(w,h));w=Math.round(w*k);h=Math.round(h*k);const c=document.createElement("canvas");c.width=w;c.height=h;c.getContext("2d").drawImage(img,0,0,w,h);res(c.toDataURL("image/jpeg",q));};img.onerror=rej;img.src=r.result;};r.onerror=rej;r.readAsDataURL(file);});}
+function toast(m){const t=$("#toast");t.textContent=m;t.hidden=false;clearTimeout(toast.t);toast.t=setTimeout(()=>t.hidden=true,3200);}
+
+// ---------- tabs ----------
+let cur="bp";
+function go(tab){cur=tab;
+  document.querySelectorAll(".tab").forEach(b=>b.setAttribute("aria-selected",b.dataset.tab===tab));
+  ["bp","ef","res"].forEach(k=>$("#view-"+k).hidden=k!==tab);
+  if(tab==="res")renderRes();
+  $("#fab").hidden=tab==="res";
+  $("#fabBtn").textContent=tab==="bp"?"Ir para Estrutura Física":"Ver resultado";
+  updFab(); window.scrollTo({top:0});
+}
+function updFab(){const p=cur==="ef"?"ef":"bp";const r=scorePart(p);$("#fabNote").textContent=`${r.answered} de ${r.total} itens avaliados`;}
+$("#fabBtn").onclick=()=>go(cur==="bp"?"ef":"res");
+document.addEventListener("click",()=>{if(cur==="bp"||cur==="ef")updFab();});
+
+// ---------- result & submit ----------
+function renderRes(){
+  const bp=scorePart("bp"),ef=scorePart("ef");
+  const pend=[];["bp","ef"].forEach(p=>PARTS[p].s.forEach((s,si)=>{const r=scoreSection(p,si);if(r.answered<r.total)pend.push({p,si,t:cap(s.t),n:r.total-r.answered});}));
+  const table=(p,R)=>`<div class="tw"><table class="res"><thead><tr><th>Seção</th><th class="r">Itens</th><th class="r">Resultado</th><th style="width:28%"></th></tr></thead><tbody>${PARTS[p].s.map((s,si)=>{const r=R.secs[si],b=band(r.pct);return `<tr><td>${esc(cap(s.t))}${r.zeroed?`<div class="note" style="color:var(--bad)">${esc(r.zeroed)}</div>`:""}</td><td class="r num">${r.D}/${r.C}</td><td class="r num">${fmtPct(r.pct)}</td><td><div class="bar"><i style="width:${(r.pct||0)*100}%;background:${b.col}"></i></div></td></tr>`;}).join("")}</tbody></table></div>`;
+  const big=(lab,R)=>{const b=band(R.pct);return `<div class="card big"><div class="lab">${lab}</div><div class="val num">${fmtPct(R.pct)}</div><div class="st"><span class="badge ${b.cls}">${b.lab}</span></div><div class="note" style="margin-top:6px">${R.answered} de ${R.total} itens avaliados</div></div>`;};
+  $("#view-res").innerHTML=`
+    <div class="sumhead">${big("Boas Práticas",bp)}${big("Estrutura Física",ef)}</div>
+    ${pend.length?`<div class="card"><strong>Itens sem avaliação</strong><p class="pend">${pend.map(x=>`<button data-goto="${x.p}:${x.si}">${esc(x.t)} (${x.n})</button>`).join(" · ")}</p></div>`:""}
+    <div class="card"><h3 style="font-size:16px;margin-bottom:8px">Boas Práticas por seção</h3>${table("bp",bp)}</div>
+    <div class="card"><h3 style="font-size:16px;margin-bottom:8px">Estrutura Física por seção</h3>${table("ef",ef)}</div>
+    <div class="card"><label class="f">Observações gerais<textarea id="obsGeral" rows="3">${esc(S.obsGeral)}</textarea></label>
+      <div class="note" style="margin-top:8px">Faixas: 0% a 49,99% inaceitável · 50% a 84,99% pode gerar riscos · 85% a 100% dentro da meta</div></div>
+    <div class="card"><h3 style="font-size:16px;margin-bottom:10px">Assinatura do comitê</h3><div id="comite" style="display:flex;flex-direction:column;gap:10px"></div>
+      <button class="link" id="addM" style="margin-top:8px">+ Adicionar participante</button></div>
+    <div class="card"><div class="actions"><button class="btn" id="sendBtn">Enviar por e-mail (PDF)</button><button class="btn sec2" id="pdfBtn">Baixar PDF</button><button class="link danger" id="clearBtn">Limpar formulário</button></div>
+      <div id="sendMsg" style="margin-top:12px"></div></div>`;
+  renderComite();
+  $("#addM").onclick=()=>{S.comite.push({nome:"",funcao:"",sig:""});renderComite();saveDraft();};
+  $("#sendBtn").onclick=submit; $("#pdfBtn").onclick=()=>downloadPdf(snapshot());
+  $("#clearBtn").onclick=e=>{const b=e.target;if(b.dataset.armed){S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");toast("Formulário limpo.");}else{b.dataset.armed=1;b.textContent="Toque de novo para confirmar";setTimeout(()=>{delete b.dataset.armed;b.textContent="Limpar formulário";},4000);}};
+}
+function renderComite(){
+  const box=$("#comite");
+  box.innerHTML=S.comite.map((m,i)=>`<div class="member"><label class="f">Nome<input type="text" id="cm-n-${i}" data-cm="${i}:nome" value="${esc(m.nome)}"></label><label class="f">Função<input type="text" id="cm-f-${i}" data-cm="${i}:funcao" value="${esc(m.funcao)}"></label>
+    <div class="sig"><canvas class="sigpad" data-sig="${i}" aria-label="Assinatura de ${esc(m.nome||"participante")}"></canvas><div class="sigrow"><span>Assine com o dedo ou o mouse</span><span><button class="link" data-clrsig="${i}">Limpar assinatura</button>${S.comite.length>1?` · <button class="link danger" data-rm="${i}">Remover</button>`:""}</span></div></div></div>`).join("");
+  box.querySelectorAll("canvas").forEach(setupSig);
+  box.querySelectorAll("[data-clrsig]").forEach(b=>b.onclick=()=>{S.comite[+b.dataset.clrsig].sig="";renderComite();saveDraft();});
+  box.querySelectorAll("[data-rm]").forEach(b=>b.onclick=()=>{S.comite.splice(+b.dataset.rm,1);renderComite();saveDraft();});
+}
+function setupSig(cv){
+  const i=+cv.dataset.sig,r=cv.getBoundingClientRect(),dpr=window.devicePixelRatio||1;
+  cv.width=r.width*dpr;cv.height=r.height*dpr;const ctx=cv.getContext("2d");ctx.scale(dpr,dpr);ctx.lineWidth=2.2;ctx.lineCap="round";ctx.lineJoin="round";ctx.strokeStyle="#111";
+  if(S.comite[i].sig){const im=new Image();im.onload=()=>ctx.drawImage(im,0,0,r.width,r.height);im.src=S.comite[i].sig;}
+  let drawing=false,last;
+  const pt=e=>{const b=cv.getBoundingClientRect();return[e.clientX-b.left,e.clientY-b.top];};
+  cv.onpointerdown=e=>{drawing=true;last=pt(e);cv.setPointerCapture(e.pointerId);};
+  cv.onpointermove=e=>{if(!drawing)return;const p=pt(e);ctx.beginPath();ctx.moveTo(...last);ctx.lineTo(...p);ctx.stroke();last=p;};
+  cv.onpointerup=cv.onpointercancel=()=>{if(!drawing)return;drawing=false;
+    const o=document.createElement("canvas");o.width=r.width*dpr;o.height=r.height*dpr;const oc=o.getContext("2d");oc.fillStyle="#fff";oc.fillRect(0,0,o.width,o.height);oc.drawImage(cv,0,0);
+    S.comite[i].sig=o.toDataURL("image/jpeg",0.8);saveDraft();};
+}
+function snapshot(){
+  const bp=scorePart("bp"),ef=scorePart("ef");
+  return {id:null,ident:{...S.ident},ans:{...S.ans},obs:{...S.obs},fotos:JSON.parse(JSON.stringify(S.fotos)),comite:S.comite.map(m=>({...m})),obsGeral:S.obsGeral,
+    res:{bp:bp.pct,ef:ef.pct,bpSecs:bp.secs.map(s=>s.pct),efSecs:ef.secs.map(s=>s.pct)},criadoEm:new Date().toISOString()};
+}
+
+// ===== Envio automático por e-mail (PDF) via Google Apps Script =====
+// Cole aqui a URL do Web App do Apps Script (termina em /exec).
+const APPS_SCRIPT_URL = "";
+
+function submit(){
+  const msg=$("#sendMsg"),btn=$("#sendBtn"); const I=S.ident;
+  if(!I.unidade.trim()||!I.mes){msg.innerHTML=`<div class="msg err">Preencha a unidade e o mês/ano antes de enviar.</div>`;window.scrollTo({top:0,behavior:"smooth"});$("#f-unidade").focus();return;}
+  const bp=scorePart("bp"),ef=scorePart("ef");
+  if(bp.answered===0&&ef.answered===0){msg.innerHTML=`<div class="msg err">Nenhum item foi avaliado ainda.</div>`;return;}
+  if(!window.jspdf){msg.innerHTML=`<div class="msg err">O gerador de PDF não carregou. Verifique a internet e recarregue a página.</div>`;return;}
+  const A=snapshot(); const {doc,fname}=buildPdf(A);
+  if(!APPS_SCRIPT_URL){doc.save(fname);msg.innerHTML=`<div class="msg info">O envio automático ainda não foi configurado. O PDF foi baixado; envie para paloma.miranda@nutrisaude.com.br.</div>`;return;}
+  btn.disabled=true;btn.textContent="Enviando…";
+  const resumo=["bp","ef"].map(p=>{const R=scorePart(p);return `${PARTS[p].name}: ${fmtPct(R.pct)} (${band(R.pct).lab})\n`+PARTS[p].s.map((s,si)=>`  - ${cap(s.t)}: ${fmtPct(R.secs[si].pct)}${R.secs[si].zeroed?" ["+R.secs[si].zeroed+"]":""}`).join("\n");}).join("\n\n");
+  const f=$("#pdfSendForm"); f.action=APPS_SCRIPT_URL;
+  const set=(n,v)=>{f.elements[n].value=v;};
+  set("unidade",I.unidade.trim());set("gestor",I.gestor);set("mes",I.mes);set("auditor",I.auditor);
+  set("resultadoBP",fmtPct(bp.pct)+" - "+band(bp.pct).lab);set("resultadoEF",fmtPct(ef.pct)+" - "+band(ef.pct).lab);
+  set("resumo",resumo);set("obsGeral",S.obsGeral||"");set("filename",fname);set("pdfBase64",doc.output("datauristring"));
+  let done=false; const fr=$("#hiddenSendFrame");
+  const finish=()=>{if(done)return;done=true;btn.disabled=false;btn.textContent="Enviar por e-mail (PDF)";
+    msg.innerHTML=`<div class="msg ok">Checklist enviado para a coordenação. Resultado BP ${fmtPct(bp.pct)} · EF ${fmtPct(ef.pct)}.</div><div class="actions" style="margin-top:10px"><button class="btn" id="newA">Iniciar nova auditoria</button></div>`;
+    $("#newA").onclick=()=>{S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");};};
+  fr.onload=finish; setTimeout(finish,15000);
+  f.submit();
+}
+
+// ---------- PDF ----------
+function buildPdf(A){
+  const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:"mm",format:"a4"}); const W=210,M=14;
+  const [y,m]=(A.ident.mes||"").split("-"); const mesTxt=m?`${m}/${y}`:"";
+  const BR=[13,92,85];
+  const head=(t,code)=>{doc.setFillColor(...BR);doc.rect(0,0,W,24,"F");doc.setTextColor(255);doc.setFont("helvetica","bold");doc.setFontSize(14);doc.text("CHECKLIST GERAL DE AUDITORIA",M,11);doc.setFontSize(10);doc.setFont("helvetica","normal");doc.text(`${t} · ${code}`,M,18);doc.setTextColor(20);
+    doc.setFontSize(9.5);doc.text(`Unidade: ${A.ident.unidade||"-"}    Gestor(a): ${A.ident.gestor||"-"}    Mês/ano: ${mesTxt}    Auditor(a): ${A.ident.auditor||"-"}`,M,31);return 36;};
+  const col=p=>p==null?[110,110,110]:p<.5?[179,38,30]:p<.85?[154,98,0]:[31,122,63];
+  let first=true;
+  for(const p of ["bp","ef"]){
+    if(!first)doc.addPage(); first=false;
+    const part=PARTS[p], R=scorePart(p,A.ans); let yy=head(part.title.toUpperCase(),part.code);
+    const b=band(R.pct); doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...col(R.pct));doc.text(`Resultado final: ${fmtPct(R.pct)} - ${b.lab}`,M,yy+2);doc.setTextColor(20);yy+=6;
+    doc.autoTable({startY:yy,head:[["Seção","Conf./Aval.","%"]],body:part.s.map((s,si)=>{const r=R.secs[si];return [cap(s.t)+(r.zeroed?`\n(${r.zeroed})`:""),`${r.D}/${r.C}`,fmtPct(r.pct)];}),
+      styles:{fontSize:8.5,cellPadding:1.8},headStyles:{fillColor:BR},columnStyles:{1:{halign:"right",cellWidth:24},2:{halign:"right",cellWidth:20}},margin:{left:M,right:M},
+      didParseCell:d=>{if(d.section==="body"&&d.column.index===2){d.cell.styles.textColor=col(R.secs[d.row.index].pct);d.cell.styles.fontStyle="bold";}}});
+    for(const [si,s] of part.s.entries()){
+      const r=R.secs[si];
+      doc.autoTable({startY:doc.lastAutoTable.finalY+6,head:[[{content:`${cap(s.t)} - ${fmtPct(r.pct)}`,colSpan:3}],["Item","Aval.","Observação"]],
+        body:s.q.map((q,qi)=>{const id=qid(p,si,qi),v=A.ans[id];const g=s.gold&&s.gold.includes(qi+1)?" [Regra de ouro]":"";const nf=(A.fotos[id]||[]).filter(Boolean).length;return [`${qi+1}. ${q}${g}`,v===undefined?"-":v==="na"?"N/A":String(v),(A.obs[id]||"")+(nf?`${A.obs[id]?"\n":""}(${nf} foto${nf>1?"s":""})`:"")];}),
+        styles:{fontSize:7.8,cellPadding:1.6,valign:"top"},headStyles:{fillColor:BR},columnStyles:{0:{cellWidth:112},1:{halign:"center",cellWidth:14,fontStyle:"bold"}},margin:{left:M,right:M},
+        didParseCell:d=>{if(d.section==="body"&&d.column.index===1){const t=d.cell.raw;d.cell.styles.textColor=t==="0"?[179,38,30]:t==="1"?[31,122,63]:[110,110,110];}}});
+    }
+  }
+  // fotos
+  const fotoList=[];["bp","ef"].forEach(p=>PARTS[p].s.forEach((s,si)=>s.q.forEach((q,qi)=>{const id=qid(p,si,qi);(A.fotos[id]||[]).forEach(src=>{if(src)fotoList.push({src,cap:`${PARTS[p].name} · ${cap(s.t)} · item ${qi+1}`,obs:A.obs[id]||""});});})));
+  if(fotoList.length){doc.addPage();let yy=head("REGISTRO FOTOGRÁFICO","");const cw=(W-2*M-6)/2,ch=62;let c=0;
+    for(const f of fotoList){if(yy+ch+12>285){doc.addPage();yy=head("REGISTRO FOTOGRÁFICO","");c=0;}
+      const x=M+c*(cw+6);try{const pr=doc.getImageProperties(f.src);const k=Math.min(cw/pr.width,ch/pr.height);doc.addImage(f.src,"JPEG",x,yy,pr.width*k,pr.height*k);}catch(e){}
+      doc.setFontSize(7.5);doc.text(doc.splitTextToSize(f.cap+(f.obs?" - "+f.obs:""),cw).slice(0,2),x,yy+ch+4);
+      c++;if(c===2){c=0;yy+=ch+12;}}
+  }
+  // resumo + assinaturas
+  doc.addPage();let yy=head("CONCLUSÃO","");
+  const bp=scorePart("bp",A.ans),ef=scorePart("ef",A.ans);
+  doc.autoTable({startY:yy,head:[["Relatório","Resultado","Classificação"]],body:[["Boas Práticas",fmtPct(bp.pct),band(bp.pct).lab],["Estrutura Física",fmtPct(ef.pct),band(ef.pct).lab]],styles:{fontSize:10},headStyles:{fillColor:BR},margin:{left:M,right:M}});
+  yy=doc.lastAutoTable.finalY+6;doc.setFontSize(8.5);doc.setTextColor(90);doc.text("Inaceitável: 0% até 49,99%   ·   Pode gerar riscos: 50% até 84,99%   ·   Dentro da meta: 85% até 100%",M,yy);doc.setTextColor(20);yy+=8;
+  if(A.obsGeral){doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("Observações:",M,yy);doc.setFont("helvetica","normal");yy+=5;const l=doc.splitTextToSize(A.obsGeral,W-2*M);doc.text(l,M,yy);yy+=l.length*4.5+4;}
+  doc.setFont("helvetica","bold");doc.setFontSize(10);doc.text("ASSINATURA DO COMITÊ",M,yy);yy+=4;doc.setFont("helvetica","normal");
+  for(const mb of (A.comite||[])){if(!mb.nome&&!mb.sig)continue;if(yy>250){doc.addPage();yy=head("CONCLUSÃO","");}
+    if(mb.sig){try{doc.addImage(mb.sig,"JPEG",M,yy,60,20);}catch(e){}}
+    doc.line(M,yy+21,M+80,yy+21);doc.setFontSize(9);doc.text(`${mb.nome||""}${mb.funcao?" - "+mb.funcao:""}`,M,yy+25.5);yy+=32;}
+  const n=doc.getNumberOfPages();for(let i=1;i<=n;i++){doc.setPage(i);doc.setFontSize(7.5);doc.setTextColor(120);doc.text(`NutriSaúde · Checklist Geral de Auditoria · página ${i}/${n}`,M,292);}
+  const fname=`Auditoria_${(A.ident.unidade||"unidade").replace(/[^\wÀ-ú-]+/g,"_")}_${A.ident.mes||""}.pdf`;
+  return {doc,fname};
+}
+function downloadPdf(A){if(!window.jspdf){toast("O gerador de PDF não carregou. Recarregue a página.");return;}const {doc,fname}=buildPdf(A);doc.save(fname);}
+
+// ---------- boot ----------
+function fillIdent(){for(const k of ["unidade","gestor","mes","auditor"])$("#f-"+k).value=S.ident[k]||"";}
+fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");
+</script>
+
+</body>
+</html>
