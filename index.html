@@ -74,6 +74,14 @@ section.stack{display:flex;flex-direction:column;gap:14px;margin-top:16px}
 .b-ok{background:var(--ok-soft);color:var(--ok)}.b-warn{background:var(--warn-soft);color:var(--warn)}.b-bad{background:var(--bad-soft);color:var(--bad)}.b-na{background:var(--na-soft);color:var(--na)}
 .q{border-top:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
 .q[data-v="0"]{box-shadow:inset 3px 0 0 var(--bad)}
+.prev{font-size:12.5px;line-height:1.4;padding:7px 10px;border-radius:7px;background:var(--warn-soft);color:var(--warn)}
+.prev.alert{background:var(--bad);color:#fff;font-weight:600}
+.reinc{border-radius:8px;padding:10px 12px;font-size:13.5px;background:var(--warn-soft);color:var(--fg);margin-top:12px}
+.reinc.err{background:var(--sunk);color:var(--muted)}
+.reinc strong{color:var(--warn)}
+.reinc .lst{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px}
+.reinc .lst button{text-align:left;border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;font-size:12.5px}
+.reinc .now{margin-top:6px;color:var(--bad);font-weight:700}
 .q[data-v="1"]{box-shadow:inset 3px 0 0 var(--ok)}
 .q[data-v="na"]{box-shadow:inset 3px 0 0 var(--na)}
 .qt{display:flex;gap:10px}
@@ -169,6 +177,7 @@ table.res td.r,table.res th.r{text-align:right}
         <label class="f">Mês/ano<input type="month" id="f-mes"></label>
         <label class="f">Auditor(a)<input type="text" id="f-auditor" autocomplete="off" placeholder="Quem está aplicando"></label>
       </div>
+      <div id="reincBox" class="reinc" hidden aria-live="polite"></div>
       <datalist id="units"><option value="BTG 8"><option value="BTG 1"><option value="HWASHIN"><option value="Ribeirão"><option value="Reckitt"></datalist>
       <div class="legend">
         <span><i class="dot" style="background:var(--ok)"></i>1 = Conforme</span>
@@ -192,7 +201,7 @@ table.res td.r,table.res th.r{text-align:right}
 <iframe name="hiddenSendFrame" id="hiddenSendFrame" title="envio" style="display:none"></iframe>
 <form id="pdfSendForm" method="POST" target="hiddenSendFrame" style="display:none">
   <input type="hidden" name="unidade"><input type="hidden" name="gestor"><input type="hidden" name="mes"><input type="hidden" name="auditor">
-  <input type="hidden" name="resultadoBP"><input type="hidden" name="resultadoEF"><input type="hidden" name="resumo"><input type="hidden" name="obsGeral"><input type="hidden" name="dados">
+  <input type="hidden" name="resultadoBP"><input type="hidden" name="resultadoEF"><input type="hidden" name="resumo"><input type="hidden" name="obsGeral"><input type="hidden" name="dados"><input type="hidden" name="ncs"><input type="hidden" name="reincidencias">
   <input type="hidden" name="filename"><input type="hidden" name="pdfBase64">
 </form>
 
@@ -246,6 +255,7 @@ function renderPart(p){
       <div class="qs">${rule}${sec.q.map((q,qi)=>{const id=qid(p,si,qi);const isG=sec.gold&&sec.gold.includes(qi+1);return `
         <div class="q" id="q-${id}" data-v="${S.ans[id]===undefined?"":S.ans[id]}">
           <div class="qt"><span class="qn">${qi+1}.</span><p>${esc(q)}${isG?'<span class="gold">Regra de ouro</span>':""}</p></div>
+          <div class="prev" id="prev-${id}" hidden></div>
           <div class="ans" role="group" aria-label="Avaliação do item ${qi+1}">
             ${[[1,"1","Conforme"],[0,"0","Não conforme"],["na","N/A","Não se aplica"]].map(([v,l,s])=>`<button data-q="${id}" data-v="${v}" aria-pressed="${S.ans[id]===v}">${l}<small>${s}</small></button>`).join("")}
           </div>
@@ -258,6 +268,7 @@ function renderPart(p){
         </div>`;}).join("")}</div></div>`;
   }).join("");
   part.s.forEach((_,si)=>updSec(p,si));
+  if(typeof R!=="undefined"&&R&&R.itens)Object.keys(R.itens).forEach(id=>{if(id.startsWith(p+"-"))updPrev(id);});
 }
 function thumbs(id){return (S.fotos[id]||[]).map((src,i)=>`<div class="thumb"><img src="${src}" alt="Foto ${i+1}"><button data-delfoto="${id}" data-i="${i}" aria-label="Remover foto">×</button></div>`).join("");}
 function updSec(p,si){
@@ -279,7 +290,8 @@ document.addEventListener("click",e=>{
     if(S.ans[id]===v)delete S.ans[id]; else S.ans[id]=v;
     const q=$("#q-"+id);q.dataset.v=S.ans[id]===undefined?"":S.ans[id];
     q.querySelectorAll(".ans button").forEach(b=>{const bv=b.dataset.v==="na"?"na":+b.dataset.v;b.setAttribute("aria-pressed",S.ans[id]===bv);});
-    const [p,si]=id.split("-");updSec(p,+si);updTop();saveDraft();return;}
+    const [p,si]=id.split("-");updSec(p,+si);updTop();saveDraft();updPrev(id);updReincBox();return;}
+  if(t.dataset.gotoq){const id=t.dataset.gotoq,[p,si]=id.split("-");openState[p+si]=true;go(p);const s=$("#sec-"+p+si);s.dataset.open=true;s.querySelector(".sec-h").setAttribute("aria-expanded",true);$("#q-"+id).scrollIntoView({behavior:"smooth",block:"center"});return;}
   if(t.dataset.toggle){const k=t.dataset.toggle,s=$("#sec-"+k),o=s.dataset.open!=="true";s.dataset.open=o;t.setAttribute("aria-expanded",o);openState[k]=o;return;}
   if(t.dataset.delfoto){const id=t.dataset.delfoto;S.fotos[id].splice(+t.dataset.i,1);if(!S.fotos[id].length)delete S.fotos[id];$("#th-"+id).innerHTML=thumbs(id);saveDraft();return;}
   if(t.dataset.tab){go(t.dataset.tab);return;}
@@ -288,7 +300,7 @@ document.addEventListener("click",e=>{
 document.addEventListener("input",e=>{
   const t=e.target;
   if(t.dataset.obs){S.obs[t.dataset.obs]=t.value;if(!t.value)delete S.obs[t.dataset.obs];saveDraft();}
-  else if(t.id&&t.id.startsWith("f-")){S.ident[t.id.slice(2)]=t.value;saveDraft();}
+  else if(t.id&&t.id.startsWith("f-")){S.ident[t.id.slice(2)]=t.value;saveDraft();if(t.id==="f-unidade"){clearTimeout(reincT);reincT=setTimeout(consultaReinc,800);}}
   else if(t.id==="obsGeral"){S.obsGeral=t.value;saveDraft();}
   else if(t.dataset.cm){const [i,f]=t.dataset.cm.split(":");S.comite[+i][f]=t.value;saveDraft();}
 });
@@ -335,7 +347,7 @@ function renderRes(){
   renderComite();
   $("#addM").onclick=()=>{S.comite.push({nome:"",funcao:"",sig:""});renderComite();saveDraft();};
   $("#sendBtn").onclick=submit; $("#pdfBtn").onclick=()=>downloadPdf(snapshot());
-  $("#clearBtn").onclick=e=>{const b=e.target;if(b.dataset.armed){S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");toast("Formulário limpo.");}else{b.dataset.armed=1;b.textContent="Toque de novo para confirmar";setTimeout(()=>{delete b.dataset.armed;b.textContent="Limpar formulário";},4000);}};
+  $("#clearBtn").onclick=e=>{const b=e.target;if(b.dataset.armed){S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();toast("Formulário limpo.");}else{b.dataset.armed=1;b.textContent="Toque de novo para confirmar";setTimeout(()=>{delete b.dataset.armed;b.textContent="Limpar formulário";},4000);}};
 }
 function renderComite(){
   const box=$("#comite");
@@ -359,7 +371,7 @@ function setupSig(cv){
 }
 function snapshot(){
   const bp=scorePart("bp"),ef=scorePart("ef");
-  return {id:null,ident:{...S.ident},ans:{...S.ans},obs:{...S.obs},fotos:JSON.parse(JSON.stringify(S.fotos)),comite:S.comite.map(m=>({...m})),obsGeral:S.obsGeral,
+  return {id:null,ident:{...S.ident},ans:{...S.ans},obs:{...S.obs},fotos:JSON.parse(JSON.stringify(S.fotos)),comite:S.comite.map(m=>({...m})),obsGeral:S.obsGeral,reinc:Object.fromEntries(reincAtuais().map(id=>[id,R.itens[id].datas])),
     res:{bp:bp.pct,ef:ef.pct,bpSecs:bp.secs.map(s=>s.pct),efSecs:ef.secs.map(s=>s.pct)},criadoEm:new Date().toISOString()};
 }
 
@@ -369,6 +381,7 @@ const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdo9oHLD4uZlKw
 
 function submit(){
   const msg=$("#sendMsg"),btn=$("#sendBtn"); const I=S.ident;
+  {const opt=[...document.querySelectorAll("#units option")].map(o=>o.value).find(v=>v.toLowerCase()===(I.unidade||"").trim().toLowerCase());if(opt){I.unidade=opt;$("#f-unidade").value=opt;}}
   if(!I.unidade.trim()||!I.mes){msg.innerHTML=`<div class="msg err">Preencha a unidade e o mês/ano antes de enviar.</div>`;window.scrollTo({top:0,behavior:"smooth"});$("#f-unidade").focus();return;}
   const bp=scorePart("bp"),ef=scorePart("ef");
   if(bp.answered===0&&ef.answered===0){msg.innerHTML=`<div class="msg err">Nenhum item foi avaliado ainda.</div>`;return;}
@@ -382,6 +395,8 @@ function submit(){
   set("unidade",I.unidade.trim());set("gestor",I.gestor);set("mes",I.mes);set("auditor",I.auditor);
   set("resultadoBP",fmtPct(bp.pct)+" - "+band(bp.pct).lab);set("resultadoEF",fmtPct(ef.pct)+" - "+band(ef.pct).lab);
   set("resumo",resumo);
+  set("ncs",JSON.stringify(["bp","ef"].flatMap(p=>PARTS[p].s.flatMap((s,si)=>s.q.map((_,qi)=>qid(p,si,qi)))).filter(id=>S.ans[id]===0).map(id=>({id,obs:(S.obs[id]||"").slice(0,200)}))));
+  set("reincidencias",JSON.stringify(reincAtuais().map(id=>{const r=itemRef(id),it=R.itens[id];return {bloco:r.bloco,n:r.n,texto:r.texto.slice(0,180),datas:it.datas,seguidas:it.naUltima?it.seguidas:0};})));
   set("dados",JSON.stringify(["bp","ef"].map(p=>{const R=scorePart(p);let fotos=0;
     const secs=PARTS[p].s.map((s,si)=>{let na=0,nc=0,nr=0;s.q.forEach((_,qi)=>{const id=qid(p,si,qi),v=S.ans[id];if(v==="na")na++;else if(v===0)nc++;else if(v===undefined)nr++;fotos+=(S.fotos[id]||[]).length;});const r=R.secs[si];return {nome:cap(s.t),pct:r.pct,pp:r.C,pr:r.D,na,nc,nr,zerada:!!r.zeroed};});
     const tot=secs.reduce((o,s)=>{["pp","pr","na","nc","nr"].forEach(k=>o[k]+=s[k]);return o;},{pp:0,pr:0,na:0,nc:0,nr:0});
@@ -389,7 +404,7 @@ function submit(){
   let done=false; const fr=$("#hiddenSendFrame");
   const finish=()=>{if(done)return;done=true;btn.disabled=false;btn.textContent="Enviar por e-mail (PDF)";
     msg.innerHTML=`<div class="msg ok">Checklist enviado para a coordenação. Resultado BP ${fmtPct(bp.pct)} · EF ${fmtPct(ef.pct)}.</div><div class="actions" style="margin-top:10px"><button class="btn" id="newA">Iniciar nova auditoria</button></div>`;
-    $("#newA").onclick=()=>{S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");};};
+    $("#newA").onclick=()=>{S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();};};
   fr.onload=finish; setTimeout(finish,15000);
   f.submit();
 }
@@ -407,14 +422,17 @@ function buildPdf(A){
     if(!first)doc.addPage(); first=false;
     const part=PARTS[p], R=scorePart(p,A.ans); let yy=head(part.title.toUpperCase(),part.code);
     const b=band(R.pct); doc.setFont("helvetica","bold");doc.setFontSize(12);doc.setTextColor(...col(R.pct));doc.text(`Resultado final: ${fmtPct(R.pct)} - ${b.lab}`,M,yy+2);doc.setTextColor(20);yy+=6;
+    const nRe=Object.keys(A.reinc||{}).filter(id=>id.startsWith(p+"-")).length;
+    if(nRe){doc.setFontSize(10);doc.setTextColor(179,38,30);doc.text(`Reincidências: ${nRe} ${nRe>1?"itens não conformes já apontados":"item não conforme já apontado"} em auditorias anteriores (destacados em vermelho)`,M,yy+1);doc.setTextColor(20);yy+=6;}
     doc.autoTable({startY:yy,head:[["Seção","Conf./Aval.","%"]],body:part.s.map((s,si)=>{const r=R.secs[si];return [cap(s.t)+(r.zeroed?`\n(${r.zeroed})`:""),`${r.D}/${r.C}`,fmtPct(r.pct)];}),
       styles:{fontSize:8.5,cellPadding:1.8},headStyles:{fillColor:BR},columnStyles:{1:{halign:"right",cellWidth:24},2:{halign:"right",cellWidth:20}},margin:{left:M,right:M},
       didParseCell:d=>{if(d.section==="body"&&d.column.index===2){d.cell.styles.textColor=col(R.secs[d.row.index].pct);d.cell.styles.fontStyle="bold";}}});
     for(const [si,s] of part.s.entries()){
-      const r=R.secs[si]; const body=[], photoRows={};
+      const r=R.secs[si]; const body=[], photoRows={}, reincRows={};
       const GAP=4, PW=(W-2*M-4-GAP)/2, PHMAX=72;
       s.q.forEach((q,qi)=>{const id=qid(p,si,qi),v=A.ans[id];const g=s.gold&&s.gold.includes(qi+1)?" [Regra de ouro]":"";
-        body.push([`${qi+1}. ${q}${g}`,v===undefined?"-":v==="na"?"N/A":String(v),A.obs[id]||""]);
+        const rc=A.reinc&&A.reinc[id]; if(rc)reincRows[body.length]=1;
+        body.push([`${qi+1}. ${q}${g}`+(rc?`\nREINCIDÊNCIA - também não conforme em ${rc.join(", ")}`:""),v===undefined?"-":v==="na"?"N/A":String(v),A.obs[id]||""]);
         const fs=(A.fotos[id]||[]).filter(Boolean);
         for(let k=0;k<fs.length;k+=2){const pair=fs.slice(k,k+2).map(src=>{let pr;try{pr=doc.getImageProperties(src);}catch(e){return null;}const sc=Math.min(PW/pr.width,PHMAX/pr.height);return {src,w:pr.width*sc,h:pr.height*sc};}).filter(Boolean);
           if(!pair.length)continue; const h=Math.max(...pair.map(x=>x.h));
@@ -422,7 +440,8 @@ function buildPdf(A){
       });
       doc.autoTable({startY:doc.lastAutoTable.finalY+6,head:[[{content:`${cap(s.t)} - ${fmtPct(r.pct)}`,colSpan:3}],["Item","Aval.","Observação"]],body,rowPageBreak:"avoid",
         styles:{fontSize:7.8,cellPadding:1.6,valign:"top"},headStyles:{fillColor:BR},columnStyles:{0:{cellWidth:112},1:{halign:"center",cellWidth:14,fontStyle:"bold"}},margin:{left:M,right:M},
-        didParseCell:d=>{if(d.section==="body"&&d.column.index===1&&!photoRows[d.row.index]){const t=d.cell.raw;d.cell.styles.textColor=t==="0"?[179,38,30]:t==="1"?[31,122,63]:[110,110,110];}},
+        didParseCell:d=>{if(d.section==="body"&&reincRows[d.row.index]){d.cell.styles.fillColor=[252,228,226];if(d.column.index===0)d.cell.styles.textColor=[150,30,24];}
+          if(d.section==="body"&&d.column.index===1&&!photoRows[d.row.index]){const t=d.cell.raw;d.cell.styles.textColor=t==="0"?[179,38,30]:t==="1"?[31,122,63]:[110,110,110];}},
         didDrawCell:d=>{if(d.section!=="body"||d.column.index!==0)return;const pair=photoRows[d.row.index];if(!pair)return;
           let x=d.cell.x+2;for(const im of pair){try{doc.addImage(im.src,"JPEG",x,d.cell.y+2,im.w,im.h);}catch(e){}x+=PW+GAP;}}});
     }
@@ -443,9 +462,46 @@ function buildPdf(A){
 }
 function downloadPdf(A){if(!window.jspdf){toast("O gerador de PDF não carregou. Recarregue a página.");return;}const {doc,fname}=buildPdf(A);doc.save(fname);}
 
+// ---------- reincidência ----------
+let R=null,reincT=null,reincU=null;
+function itemRef(id){const [p,si,qi]=id.split("-");const s=PARTS[p].s[+si];return {bloco:cap(s.t),n:+qi+1,texto:s.q[+qi]};}
+function updPrev(id){
+  const el=$("#prev-"+id); if(!el)return; const it=R&&R.itens&&R.itens[id];
+  if(!it){el.hidden=true;return;}
+  el.hidden=false; const now=S.ans[id]===0;
+  el.className="prev"+(now?" alert":"");
+  el.innerHTML=now?`⚠ REINCIDÊNCIA: este item também foi não conforme em ${esc(it.datas.join(", "))}${it.naUltima&&it.seguidas>=1?` · ${it.seguidas+1}ª vez seguida`:""}.`
+    :`Atenção: não conforme em ${esc(it.datas.join(", "))}${it.obs?` — “${esc(it.obs)}”`:""}`;
+}
+function reincAtuais(){return R&&R.itens?Object.keys(R.itens).filter(id=>S.ans[id]===0):[];}
+function updReincBox(){
+  const box=$("#reincBox");
+  if(!R){box.hidden=true;return;}
+  box.hidden=false;box.className="reinc";
+  if(R.erro){box.className="reinc err";box.textContent="Não foi possível consultar as auditorias anteriores agora. O checklist funciona normalmente, mas sem o aviso de reincidência.";return;}
+  if(!R.auditorias){box.className="reinc err";box.textContent=`Nenhuma auditoria anterior de ${R.unidade} registrada no checklist online. Os avisos de reincidência começam a partir da próxima visita.`;return;}
+  const ids=Object.keys(R.itens);
+  if(!ids.length){box.className="reinc err";box.textContent=`Última auditoria nesta unidade: ${R.ultima.data}${R.ultima.auditor?" ("+R.ultima.auditor+")":""}. Não havia itens não conformes.`;return;}
+  const now=reincAtuais();
+  box.innerHTML=`<strong>Histórico da unidade:</strong> última auditoria em ${esc(R.ultima.data)}${R.ultima.auditor?" ("+esc(R.ultima.auditor)+")":""}. ${ids.length} ${ids.length>1?"itens já foram apontados":"item já foi apontado"} como não conforme e ${ids.length>1?"estão sinalizados":"está sinalizado"} em amarelo. Se marcar 0 de novo, aparece o alerta de reincidência.
+    <div class="lst">${ids.map(id=>{const r=itemRef(id);return `<button data-gotoq="${id}">${esc(r.bloco)} · item ${r.n}</button>`;}).join("")}</div>
+    ${now.length?`<div class="now">⚠ ${now.length} reincidência${now.length>1?"s":""} marcada${now.length>1?"s":""} nesta auditoria.</div>`:""}`;
+}
+function applyReinc(){document.querySelectorAll(".prev").forEach(el=>el.hidden=true);if(R&&R.itens)Object.keys(R.itens).forEach(updPrev);updReincBox();}
+function consultaReinc(){
+  const u=(S.ident.unidade||"").trim();
+  if(!APPS_SCRIPT_URL||u.length<2){R=null;reincU=null;applyReinc();return;}
+  if(reincU===u.toLowerCase())return; reincU=u.toLowerCase();
+  const box=$("#reincBox");box.hidden=false;box.className="reinc err";box.textContent=`Consultando auditorias anteriores de ${u}…`;
+  fetch(APPS_SCRIPT_URL+"?reincidencia="+encodeURIComponent(u)).then(r=>r.json()).then(d=>{
+    if((S.ident.unidade||"").trim().toLowerCase()!==u.toLowerCase())return;
+    R=d&&d.itens?d:{erro:true};applyReinc();
+  }).catch(()=>{R={erro:true};reincU=null;applyReinc();});
+}
+
 // ---------- boot ----------
 function fillIdent(){for(const k of ["unidade","gestor","mes","auditor"])$("#f-"+k).value=S.ident[k]||"";}
-fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");
+fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();
 </script>
 
 </body>
