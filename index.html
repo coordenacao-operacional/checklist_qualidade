@@ -496,8 +496,10 @@ function consultaReinc(){
   const box=$("#reincBox");box.hidden=false;box.className="reinc err";box.textContent=`Consultando auditorias anteriores de ${u}…`;
   fetch(APPS_SCRIPT_URL+"?reincidencia="+encodeURIComponent(u)).then(r=>r.json()).then(d=>{
     if((S.ident.unidade||"").trim().toLowerCase()!==u.toLowerCase())return;
-    R=d&&d.itens?d:{erro:true};applyReinc();
-  }).catch(()=>{R={erro:true};reincU=null;applyReinc();});
+    consultaReinc.tentou=false;R=d&&d.itens?d:{erro:true};applyReinc();
+  }).catch(()=>{
+    if(!consultaReinc.tentou){consultaReinc.tentou=true;reincU=null;setTimeout(consultaReinc,2500);return;}
+    consultaReinc.tentou=false;R={erro:true};reincU=null;applyReinc();});
 }
 
 // ---------- boot ----------
