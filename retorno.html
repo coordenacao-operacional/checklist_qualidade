@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-<title>Retorno de Qualidade</title>
+<title>Entrega e Retorno · Qualidade</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
 <style>
 /* Layout: prancheta de auditoria — cabeçalho fixo com nota ao vivo, abas por relatório, cartões de seção empilhados (mobile primeiro) */
@@ -153,13 +153,20 @@ table.res td.r,table.res th.r{text-align:right}
 .aud{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13.5px}
 .aud.ok{background:var(--accent-soft)}.aud.err{background:var(--bad-soft);color:var(--bad)}.aud.wait{background:var(--sunk);color:var(--muted)}
 .aud a{color:var(--accent)}
+.modo{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.modo button{border:1.5px solid var(--line);background:var(--bg);border-radius:10px;padding:10px 12px;text-align:left;color:var(--fg)}
+.modo button b{display:block;font-size:14px}.modo button small{font-size:12px;color:var(--muted)}
+.modo button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent-soft)}
+@media (max-width:480px){.modo{grid-template-columns:1fr}}
 .q[data-st="corrigido"]{box-shadow:inset 3px 0 0 var(--ok)}.q[data-st="parcial"]{box-shadow:inset 3px 0 0 var(--warn)}.q[data-st="pendente"]{box-shadow:inset 3px 0 0 var(--bad)}
 .antes{background:var(--sunk);border-radius:8px;padding:8px 10px}
 .antes .lab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
 .antes .obs{font-size:13.5px;margin-top:2px}.antes .obs.vazio{color:var(--muted);font-style:italic}
 .antes .thumbs{margin-top:6px}
+.antes.entregue{background:var(--accent-soft);border-left:3px solid var(--na)}
+.antes.entregue.ok{border-left-color:var(--ok)}.antes.entregue.warn{border-left-color:var(--warn)}.antes.entregue.bad{border-left-color:var(--bad)}
 .thumb .ld{display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:var(--muted);background:var(--bg)}
-.ans3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:460px}
+.ans3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:480px}
 .ans3 button{border:1.5px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:10px 6px;font-weight:600;font-size:13.5px}
 .ans3 button[aria-pressed="true"][data-v="corrigido"],.ans3 button[aria-pressed="true"][data-v="Sim"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
 .ans3 button[aria-pressed="true"][data-v="parcial"],.ans3 button[aria-pressed="true"][data-v="Parcial"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
@@ -177,7 +184,7 @@ table.res td.r,table.res th.r{text-align:right}
 <body>
 <div class="top">
   <div class="top-row">
-    <div class="brand"><small>NutriSaúde · Qualidade</small><h1>Retorno de Qualidade</h1></div>
+    <div class="brand"><small>NutriSaúde · Qualidade</small><h1 id="titulo">Entrega da unidade</h1></div>
     <div class="score" title="Itens avaliados no retorno"><b id="topScore" class="num">—</b><span>itens</span></div>
   </div>
   <div class="progress" style="margin-top:10px"><i id="prog"></i></div>
@@ -186,7 +193,11 @@ table.res td.r,table.res th.r{text-align:right}
 <main class="wrap">
   <section class="stack">
     <div class="card">
-      <p class="note" style="margin:0 0 12px">Visita de retorno após a auditoria: para cada item que ficou não conforme, registre como está agora e a ação feita.</p>
+      <div class="seg modo" role="group" aria-label="Tipo de registro">
+        <button data-modo="entrega" aria-pressed="true"><b>Entrega da unidade</b><small>fim da visita: o que foi corrigido</small></button>
+        <button data-modo="retorno" aria-pressed="false"><b>Retorno de acompanhamento</b><small>nova visita: as correções se mantiveram?</small></button>
+      </div>
+      <p class="note" id="intro" style="margin:12px 0 12px"></p>
       <div class="grid">
         <label class="f">Unidade<input type="text" id="f-unidade" list="units" autocomplete="off" placeholder="Ex.: Unimed Jaú"></label>
         <label class="f">Responsável pela visita<input type="text" id="f-apoio" autocomplete="off"></label>
@@ -202,10 +213,10 @@ table.res td.r,table.res th.r{text-align:right}
 
   <section class="stack" id="contSec" hidden>
     <div class="card">
-      <h2 style="font-size:17px;margin-bottom:4px">Continuidade do trabalho pela equipe</h2>
+      <div id="contBox"><h2 style="font-size:17px;margin-bottom:4px">Continuidade do trabalho pela equipe</h2>
       <p class="note" style="margin:0 0 10px">Como a equipe está dando sequência ao que foi orientado.</p>
-      <div id="cont" style="display:flex;flex-direction:column;gap:12px"></div>
-      <label class="f" style="margin-top:14px">Parecer geral da visita<textarea id="parecer" rows="4" placeholder="Resumo da evolução, pendências e próximos passos"></textarea></label>
+      <div id="cont" style="display:flex;flex-direction:column;gap:12px;margin-bottom:14px"></div></div>
+      <label class="f"><span id="parecerLab">Parecer geral da visita</span><textarea id="parecer" rows="4"></textarea></label>
     </div>
     <div class="card">
       <div class="sumrow" id="resumo"></div>
@@ -217,7 +228,7 @@ table.res td.r,table.res th.r{text-align:right}
 <div class="toast" id="toast" hidden></div>
 <iframe name="hiddenSendFrame" id="hiddenSendFrame" title="envio" style="display:none"></iframe>
 <form id="pdfSendForm" method="POST" target="hiddenSendFrame" style="display:none">
-  <input type="hidden" name="tipo" value="retorno"><input type="hidden" name="unidade"><input type="hidden" name="auditoriaId"><input type="hidden" name="auditoriaData"><input type="hidden" name="auditoriaNota">
+  <input type="hidden" name="tipo" value="retorno"><input type="hidden" name="modo"><input type="hidden" name="fotosItens"><input type="hidden" name="unidade"><input type="hidden" name="auditoriaId"><input type="hidden" name="auditoriaData"><input type="hidden" name="auditoriaNota">
   <input type="hidden" name="apoio"><input type="hidden" name="gestora"><input type="hidden" name="dataVisita"><input type="hidden" name="itens"><input type="hidden" name="continuidade"><input type="hidden" name="parecer">
   <input type="hidden" name="filename"><input type="hidden" name="pdfBase64">
 </form>
@@ -233,13 +244,20 @@ const CONT_Q = [
   "As planilhas e registros estão sendo preenchidos corretamente na rotina?",
   "As correções feitas se mantiveram desde a última visita?"
 ];
-const DRAFT_KEY = "retorno-qualidade-v1";
+const DRAFT_KEY = "retorno-qualidade-v2";
 const $ = s => document.querySelector(s);
 const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 const fmtPct = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
-const ST = { corrigido: { l: "Corrigido", i: "✅" }, parcial: { l: "Parcial", i: "🟡" }, pendente: { l: "Pendente", i: "❌" } };
+const STE = { corrigido: { l: "Corrigido", i: "✅" }, parcial: { l: "Parcial", i: "🟡" }, pendente: { l: "Pendente", i: "❌" } };
+const STR = { corrigido: { l: "Mantido", i: "✅" }, parcial: { l: "Parcial", i: "🟡" }, pendente: { l: "Voltou a falhar", i: "❌" } };
+const STD = { corrigido: "Corrigido", parcial: "Parcial", pendente: "Pendente" };
+const isRet = () => S.modo === "retorno";
+const STm = () => isRet() ? STR : STE;
+const TXT = {
+  entrega: { t: "Entrega da unidade", intro: "Fim da visita: para cada item que ficou não conforme na auditoria, registre o que foi corrigido com a equipe, a ação feita e a foto de como ficou.", acao: "Ação realizada / como ficou", par: "Ações gerais e treinamentos realizados na visita", parPh: "Treinamentos, orientações, alinhamentos com a gestora e pendências que ficaram" },
+  retorno: { t: "Retorno de acompanhamento", intro: "Nova visita: confira se o que foi corrigido na entrega continua corrigido. Cada item mostra como estava na auditoria e como foi entregue.", acao: "Como está agora / observação", par: "Parecer geral do retorno", parPh: "A equipe deu continuidade? O que se manteve, o que voltou e próximos passos" } };
 
-function blank() { return { ident: { unidade: "", apoio: "", gestora: "", dataVisita: new Date().toISOString().slice(0, 10) }, aud: null, st: {}, acao: {}, fotos: {}, cont: {}, contObs: {}, parecer: "" }; }
+function blank() { return { modo: "entrega", ident: { unidade: "", apoio: "", gestora: "", dataVisita: new Date().toISOString().slice(0, 10) }, aud: null, st: {}, acao: {}, fotos: {}, cont: {}, contObs: {}, parecer: "" }; }
 let S = blank();
 try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); if (d && d.ident) S = Object.assign(blank(), d); } catch (e) {}
 let saveT; function saveDraft() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(S)); } catch (e) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(Object.assign({}, S, { fotos: {} }))); } catch (_) {} } }, 400); }
@@ -268,16 +286,25 @@ function renderAud() {
   const a = S.aud, box = $("#audBox"); if (!a) return;
   box.hidden = false; box.className = "aud ok";
   box.innerHTML = `<strong>Auditoria de ${esc(a.data)}</strong>${a.auditor ? " · " + esc(a.auditor) : ""} · Boas Práticas ${fmtPct(a.bp)}${a.ef != null ? " · Estrutura Física " + fmtPct(a.ef) : ""}<br>${a.ncs.length} ${a.ncs.length === 1 ? "item ficou" : "itens ficaram"} não conforme${a.ncs.length === 1 ? "" : "s"}${a.pdf ? ` · <a href="${esc(a.pdf)}" target="_blank" rel="noopener">abrir PDF da auditoria</a>` : ""}` +
-    (a.retornos && a.retornos.length ? `<div class="note" style="margin-top:4px">Já ${a.retornos.length === 1 ? "existe 1 retorno" : "existem " + a.retornos.length + " retornos"} para esta auditoria (${a.retornos.map(r => r.data).join(", ")}). Um novo envio fica registrado como mais um retorno.</div>` : "");
+    (isRet() ? (a.entrega ? `<div style="margin-top:4px">Entrega registrada em <b>${esc(a.entrega.data)}</b>${a.entrega.apoio ? " (" + esc(a.entrega.apoio) + ")" : ""}: ${a.entrega.itens.filter(i => i.status === "corrigido").length} de ${a.entrega.itens.length} itens corrigidos${a.entrega.pdf ? ` · <a href="${esc(a.entrega.pdf)}" target="_blank" rel="noopener">abrir PDF da entrega</a>` : ""}</div>` : `<div class="note" style="margin-top:4px">Não há entrega registrada para esta auditoria. O retorno vai comparar direto com a auditoria.</div>`)
+      : (a.entregas && a.entregas.length ? `<div class="note" style="margin-top:4px">Já existe entrega registrada para esta auditoria (${a.entregas.map(r => r.data).join(", ")}). Um novo envio fica como a entrega mais recente.</div>` : "")) +
+    (isRet() && a.retornos && a.retornos.length ? `<div class="note" style="margin-top:4px">Retornos anteriores desta auditoria: ${a.retornos.map(r => r.data).join(", ")}.</div>` : "");
 }
 
 // ---------- itens ----------
 const openG = {};
+function renderModo() {
+  const T = TXT[S.modo];
+  $("#titulo").textContent = T.t; document.title = T.t; $("#intro").textContent = T.intro;
+  document.querySelectorAll("[data-modo]").forEach(b => b.setAttribute("aria-pressed", b.dataset.modo === S.modo));
+  $("#contBox").hidden = !isRet(); $("#parecerLab").textContent = T.par; $("#parecer").placeholder = T.parPh;
+}
 function render() {
+  renderModo();
   const el = $("#itens"), a = S.aud;
   $("#contSec").hidden = !a;
   if (!a) { el.innerHTML = ""; updSum(); return; }
-  if (!a.ncs.length) { el.innerHTML = `<div class="card msg ok">A última auditoria não teve itens não conformes. Registre só a continuidade abaixo.</div>`; renderCont(); updSum(); return; }
+  if (!a.ncs.length) { el.innerHTML = `<div class="card msg ok">A última auditoria não teve itens não conformes.</div>`; renderCont(); updSum(); return; }
   const grupos = {};
   a.ncs.slice().sort(ordem).forEach(n => { const r = ref(n.id), k = r.parte + " · " + r.bloco; (grupos[k] = grupos[k] || []).push({ ...n, ...r }); });
   el.innerHTML = Object.entries(grupos).map(([k, list], gi) => {
@@ -294,11 +321,20 @@ function itemHtml(x) {
     <div class="qt"><span class="qn">${x.n}.</span><p>${esc(x.texto)}</p></div>
     <div class="antes"><div class="lab">Como estava · auditoria de ${esc(S.aud.data)}</div>${x.obs ? `<div class="obs">“${esc(x.obs)}”</div>` : `<div class="obs vazio">Sem observação na auditoria.</div>`}
       ${(x.fotos || []).length ? `<div class="thumbs">${x.fotos.map(f => `<div class="thumb" data-foto="${f}"><span class="ld">foto</span></div>`).join("")}</div>` : ""}</div>
-    <div class="ans3" role="group" aria-label="Situação atual do item">${Object.entries(ST).map(([k, v]) => `<button data-q="${id}" data-v="${k}" aria-pressed="${st === k}">${v.i} ${v.l}</button>`).join("")}</div>
-    <textarea data-acao="${id}" rows="2" placeholder="Ação realizada / como está agora">${esc(S.acao[id] || "")}</textarea>
+    ${isRet() ? entregaBox(id) : ""}
+    <div class="ans3" role="group" aria-label="Situação atual do item">${Object.entries(STm()).map(([k, v]) => `<button data-q="${id}" data-v="${k}" aria-pressed="${st === k}">${v.i} ${v.l}</button>`).join("")}</div>
+    <textarea data-acao="${id}" rows="2" placeholder="${TXT[S.modo].acao}">${esc(S.acao[id] || "")}</textarea>
     <div class="extra"><span class="photo-btn">📷 Câmera<input type="file" accept="image/*" capture="environment" data-fotod="${id}" aria-label="Tirar foto de como ficou"></span><span class="photo-btn">🖼 Galeria<input type="file" accept="image/*" multiple data-fotod="${id}" aria-label="Escolher fotos de como ficou"></span></div>
     <div class="thumbs" id="th-${id}">${thumbsD(id)}</div>
   </div>`;
+}
+function entItem(id) { const e = S.aud && S.aud.entrega; return e ? (e.itens || []).find(i => i.id === id) : null; }
+function entregaBox(id) {
+  const e = S.aud.entrega, i = entItem(id);
+  if (!e) return "";
+  const cor = i && i.status === "corrigido" ? "ok" : i && i.status === "parcial" ? "warn" : i && i.status === "pendente" ? "bad" : "na";
+  return `<div class="antes entregue ${cor}"><div class="lab">Como entregou · ${esc(e.data)}</div><div class="obs"><b>${i && i.status ? STD[i.status] : "Sem avaliação na entrega"}</b>${i && i.acao ? " — " + esc(i.acao) : ""}</div>
+    ${i && (i.fotos || []).length ? `<div class="thumbs">${i.fotos.map(f => `<div class="thumb" data-foto="${f}"><span class="ld">foto</span></div>`).join("")}</div>` : ""}</div>`;
 }
 function thumbsD(id) { return (S.fotos[id] || []).map((src, i) => `<div class="thumb"><img src="${src}" alt="Como ficou ${i + 1}"><button data-delfoto="${id}" data-i="${i}" aria-label="Remover foto">×</button></div>`).join(""); }
 function carregarFotos(sec) {
@@ -325,7 +361,8 @@ function updSum() {
   const c = contagem();
   $("#topScore").textContent = S.aud ? `${c.tot - c.sem}/${c.tot}` : "—";
   $("#prog").style.width = c.tot ? ((c.tot - c.sem) / c.tot * 100) + "%" : "0";
-  $("#resumo").innerHTML = S.aud ? `<div class="sc ok"><b>${c.corrigido}</b><span>✅ Corrigidos</span></div><div class="sc warn"><b>${c.parcial}</b><span>🟡 Parciais</span></div><div class="sc bad"><b>${c.pendente}</b><span>❌ Pendentes</span></div><div class="sc"><b>${c.tot ? Math.round(c.corrigido / c.tot * 100) : 0}%</b><span>corrigido</span></div>` +
+  const L = isRet() ? ["✅ Mantidos", "🟡 Parciais", "❌ Voltaram a falhar", "conforme"] : ["✅ Corrigidos", "🟡 Parciais", "❌ Pendentes", "corrigido"];
+  $("#resumo").innerHTML = S.aud ? `<div class="sc ok"><b>${c.corrigido}</b><span>${L[0]}</span></div><div class="sc warn"><b>${c.parcial}</b><span>${L[1]}</span></div><div class="sc bad"><b>${c.pendente}</b><span>${L[2]}</span></div><div class="sc"><b>${c.tot ? Math.round(c.corrigido / c.tot * 100) : 0}%</b><span>${L[3]}</span></div>` +
     (c.sem ? `<p class="pend" style="flex-basis:100%">${c.sem} ${c.sem === 1 ? "item ainda sem" : "itens ainda sem"} avaliação.</p>` : "") : "";
   document.querySelectorAll("#itens .sec").forEach((s, gi) => { const qs = [...s.querySelectorAll(".q")]; const done = qs.filter(q => q.dataset.st).length; const gc = $("#gc-" + gi); if (gc) gc.textContent = `${done}/${qs.length}`; });
 }
@@ -334,6 +371,10 @@ function updSum() {
 document.addEventListener("click", e => {
   const t = e.target.closest("button"); if (!t) return;
   if (t.dataset.q) { const id = t.dataset.q, v = t.dataset.v; S.st[id] === v ? delete S.st[id] : S.st[id] = v; const q = $("#q-" + id); q.dataset.st = S.st[id] || ""; q.querySelectorAll(".ans3 button").forEach(b => b.setAttribute("aria-pressed", S.st[id] === b.dataset.v)); updSum(); saveDraft(); return; }
+  if (t.dataset.modo) { const m = t.dataset.modo; if (m === S.modo) return;
+    const tem = Object.keys(S.st).length || Object.keys(S.acao).some(k => S.acao[k]) || Object.keys(S.fotos).length;
+    if (tem && !t.dataset.armed) { t.dataset.armed = 1; toast("Toque de novo para trocar. As respostas dos itens desta tela serão apagadas."); setTimeout(() => delete t.dataset.armed, 4000); return; }
+    delete t.dataset.armed; S.modo = m; S.st = {}; S.acao = {}; S.fotos = {}; saveDraft(); if (S.aud) renderAud(); render(); return; }
   if (t.dataset.c) { const i = t.dataset.c, v = t.dataset.v; S.cont[i] === v ? delete S.cont[i] : S.cont[i] = v; t.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", S.cont[i] === b.dataset.v)); saveDraft(); return; }
   if (t.dataset.toggle != null) { const s = t.closest(".sec"), o = s.dataset.open !== "true"; s.dataset.open = o; t.setAttribute("aria-expanded", o); openG[s.dataset.g] = o; if (o) carregarFotos(s); return; }
   if (t.dataset.delfoto) { const id = t.dataset.delfoto; S.fotos[id].splice(+t.dataset.i, 1); if (!S.fotos[id].length) delete S.fotos[id]; $("#th-" + id).innerHTML = thumbsD(id); saveDraft(); return; }
@@ -357,46 +398,55 @@ function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; 
 async function buildPdf() {
   const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit: "mm", format: "a4" }); const W = 210, M = 14, BR = [13, 92, 85];
   const a = S.aud, I = S.ident, c = contagem(), dataV = (I.dataVisita || "").split("-").reverse().join("/");
-  const head = () => { doc.setFillColor(...BR); doc.rect(0, 0, W, 24, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("RETORNO DE QUALIDADE - COMO ESTAVA X COMO FICOU", M, 11); doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.text(`${a.unidade || I.unidade} - visita em ${dataV} - ${I.apoio || ""}`, M, 18); doc.setTextColor(20); return 32; };
+  const head = () => { doc.setFillColor(...BR); doc.rect(0, 0, W, 24, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text(isRet() ? "RETORNO DE ACOMPANHAMENTO - COMO ENTREGOU X COMO ESTÁ" : "ENTREGA DA UNIDADE - COMO ESTAVA X COMO FICOU", M, 11); doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.text(`${a.unidade || I.unidade} - visita em ${dataV} - ${I.apoio || ""}`, M, 18); doc.setTextColor(20); return 32; };
   let y = head();
   doc.setFontSize(9.5); doc.text(`Gestora: ${I.gestora || "-"}    Auditoria de referência: ${a.data}${a.auditor ? " (" + a.auditor + ")" : ""}    Boas Práticas: ${fmtPct(a.bp)}${a.ef != null ? "    Estrutura Física: " + fmtPct(a.ef) : ""}`, M, y); y += 5;
-  doc.autoTable({ startY: y, head: [["Itens não conformes", "Corrigidos", "Parciais", "Pendentes", "Sem avaliação", "% corrigido"]], body: [[c.tot, c.corrigido, c.parcial, c.pendente, c.sem, (c.tot ? Math.round(c.corrigido / c.tot * 100) : 0) + "%"]],
+  if (isRet() && a.entrega) { doc.text(`Entrega de referência: ${a.entrega.data}${a.entrega.apoio ? " (" + a.entrega.apoio + ")" : ""} - ${a.entrega.itens.filter(i => i.status === "corrigido").length} de ${a.entrega.itens.length} itens corrigidos na entrega`, M, y); y += 5; }
+  doc.autoTable({ startY: y, head: [isRet() ? ["Itens da auditoria", "Mantidos", "Parciais", "Voltaram a falhar", "Sem avaliação", "% conforme"] : ["Itens não conformes", "Corrigidos", "Parciais", "Pendentes", "Sem avaliação", "% corrigido"]], body: [[c.tot, c.corrigido, c.parcial, c.pendente, c.sem, (c.tot ? Math.round(c.corrigido / c.tot * 100) : 0) + "%"]],
     styles: { fontSize: 10, halign: "center" }, headStyles: { fillColor: BR, fontSize: 8.5 }, margin: { left: M, right: M } });
   const stCol = s => s === "corrigido" ? [31, 122, 63] : s === "parcial" ? [154, 98, 0] : s === "pendente" ? [179, 38, 30] : [110, 110, 110];
-  const PW = (W - 2 * M - 8) / 2 - 2, PH = 62;
+  const NF = isRet() ? 3 : 2, PW = (W - 2 * M - 4 - 4 * (NF - 1)) / NF, PH = isRet() ? 48 : 62;
   const list = a.ncs.slice().sort(ordem);
-  const fotosAntes = {}; await Promise.all(list.flatMap(n => (n.fotos || []).map(f => pegarFoto(f).then(d => { if (d) (fotosAntes[n.id] = fotosAntes[n.id] || []).push(d); }))));
+  const fotosAntes = {}, fotosEnt = {};
+  await Promise.all(list.flatMap(n => (n.fotos || []).map(f => pegarFoto(f).then(d => { if (d) (fotosAntes[n.id] = fotosAntes[n.id] || []).push(d); }))));
+  if (isRet()) await Promise.all(list.flatMap(n => ((entItem(n.id) || {}).fotos || []).map(f => pegarFoto(f).then(d => { if (d) (fotosEnt[n.id] = fotosEnt[n.id] || []).push(d); }))));
+  const COLS = isRet() ? ["COMO ESTAVA (AUDITORIA)", "COMO ENTREGOU", "COMO ESTÁ AGORA"] : ["COMO ESTAVA", "COMO FICOU"];
   let grupo = null, body = [], meta = {};
   const flush = () => { if (!body.length) return; const m = meta;
-    doc.autoTable({ startY: doc.lastAutoTable.finalY + 6, head: [[{ content: grupo, colSpan: 4 }], ["Item", "Como estava (auditoria)", "Situação", "Como ficou (ação)"]], body, rowPageBreak: "avoid",
-      styles: { fontSize: 7.8, cellPadding: 1.6, valign: "top" }, headStyles: { fillColor: BR }, columnStyles: { 0: { cellWidth: 58 }, 1: { cellWidth: 50 }, 2: { cellWidth: 22, fontStyle: "bold" }, 3: { cellWidth: 52 } }, margin: { left: M, right: M },
-      didParseCell: d => { if (d.section === "body" && d.column.index === 2 && !m[d.row.index]) d.cell.styles.textColor = stCol(d.cell.raw.st); if (d.section === "body" && d.column.index === 2 && d.cell.raw && d.cell.raw.content != null) d.cell.text = [d.cell.raw.content]; },
+    const R = isRet();
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 6, head: [[{ content: grupo, colSpan: R ? 5 : 4 }], R ? ["Item", "Como estava (auditoria)", "Como entregou", "Situação agora", "Observação"] : ["Item", "Como estava (auditoria)", "Situação", "Como ficou (ação)"]], body, rowPageBreak: "avoid",
+      styles: { fontSize: 7.6, cellPadding: 1.6, valign: "top" }, headStyles: { fillColor: BR }, columnStyles: R ? { 0: { cellWidth: 48 }, 1: { cellWidth: 38 }, 2: { cellWidth: 38 }, 3: { cellWidth: 22, fontStyle: "bold" }, 4: { cellWidth: 36 } } : { 0: { cellWidth: 58 }, 1: { cellWidth: 50 }, 2: { cellWidth: 22, fontStyle: "bold" }, 3: { cellWidth: 52 } }, margin: { left: M, right: M },
+      didParseCell: d => { const sc = R ? 3 : 2; if (d.section === "body" && d.column.index === sc && !m[d.row.index] && d.cell.raw) d.cell.styles.textColor = stCol(d.cell.raw.st);
+        if (R && d.section === "body" && d.column.index === 2 && !m[d.row.index] && d.cell.raw) d.cell.styles.textColor = stCol(d.cell.raw.st); },
       didDrawCell: d => { if (d.section !== "body" || d.column.index !== 0) return; const r = m[d.row.index]; if (!r) return;
-        doc.setFontSize(7); doc.setTextColor(110); doc.text("COMO ESTAVA", d.cell.x + 2, d.cell.y + 3.5); doc.text("COMO FICOU", d.cell.x + 4 + PW + 4, d.cell.y + 3.5); doc.setTextColor(20);
-        if (r.antes) { try { doc.addImage(r.antes.src, "JPEG", d.cell.x + 2, d.cell.y + 5, r.antes.w, r.antes.h); } catch (e) {} } else { doc.setFontSize(7.5); doc.setTextColor(150); doc.text("sem foto", d.cell.x + 2, d.cell.y + 10); doc.setTextColor(20); }
-        if (r.depois) { try { doc.addImage(r.depois.src, "JPEG", d.cell.x + 4 + PW + 4, d.cell.y + 5, r.depois.w, r.depois.h); } catch (e) {} } else { doc.setFontSize(7.5); doc.setTextColor(150); doc.text("sem foto", d.cell.x + 4 + PW + 4, d.cell.y + 10); doc.setTextColor(20); } } });
+        r.fotos.forEach((ft, k) => { const x = d.cell.x + 2 + k * (PW + 4);
+          doc.setFontSize(6.8); doc.setTextColor(110); doc.text(COLS[k], x, d.cell.y + 3.5); doc.setTextColor(20);
+          if (ft) { try { doc.addImage(ft.src, "JPEG", x, d.cell.y + 5, ft.w, ft.h); } catch (e) {} } else { doc.setFontSize(7.5); doc.setTextColor(150); doc.text("sem foto", x, d.cell.y + 10); doc.setTextColor(20); } }); } });
     body = []; meta = {}; };
   doc.lastAutoTable.finalY += 0;
   const fit = src => { if (!src) return null; try { const p = doc.getImageProperties(src); const k = Math.min(PW / p.width, PH / p.height); return { src, w: p.width * k, h: p.height * k }; } catch (e) { return null; } };
   for (const n of list) {
     const r = ref(n.id), g = r.parte + " · " + r.bloco;
     if (g !== grupo) { flush(); grupo = g; }
-    const st = S.st[n.id];
-    body.push([`${r.n}. ${r.texto}`, n.obs || "Sem observação.", { content: st ? ST[st].l : "Sem avaliação", st }, S.acao[n.id] || ""]);
-    const an = fotosAntes[n.id] || [], de = S.fotos[n.id] || [];
-    for (let k = 0; k < Math.max(an.length, de.length); k++) {
-      const A = fit(an[k]), D = fit(de[k]); if (!A && !D) continue;
-      meta[body.length] = { antes: A, depois: D };
-      body.push([{ content: "", colSpan: 4, styles: { minCellHeight: Math.max(A ? A.h : 8, D ? D.h : 8) + 7 } }]);
+    const st = S.st[n.id], ei = isRet() ? entItem(n.id) : null;
+    const stCell = { content: st ? STm()[st].l : "Sem avaliação", st };
+    body.push(isRet()
+      ? [`${r.n}. ${r.texto}`, n.obs || "Sem observação.", { content: ei && ei.status ? STD[ei.status] + (ei.acao ? " - " + ei.acao : "") : "Sem registro na entrega", st: ei && ei.status }, stCell, S.acao[n.id] || ""]
+      : [`${r.n}. ${r.texto}`, n.obs || "Sem observação.", stCell, S.acao[n.id] || ""]);
+    const cols = isRet() ? [fotosAntes[n.id] || [], fotosEnt[n.id] || [], S.fotos[n.id] || []] : [fotosAntes[n.id] || [], S.fotos[n.id] || []];
+    for (let k = 0; k < Math.max(...cols.map(c => c.length)); k++) {
+      const F = cols.map(c => fit(c[k])); if (!F.some(Boolean)) continue;
+      meta[body.length] = { fotos: F };
+      body.push([{ content: "", colSpan: isRet() ? 5 : 4, styles: { minCellHeight: Math.max(...F.map(f => f ? f.h : 8)) + 7 } }]);
     }
   }
   flush();
   let yy = doc.lastAutoTable.finalY + 8; if (yy > 240) { doc.addPage(); yy = head(); }
-  doc.autoTable({ startY: yy, head: [["Continuidade do trabalho pela equipe", "Resposta", "Comentário"]], body: CONT_Q.map((q, i) => [q, S.cont[i] || "-", S.contObs[i] || ""]), styles: { fontSize: 8.5 }, headStyles: { fillColor: BR }, columnStyles: { 1: { cellWidth: 20, fontStyle: "bold" } }, margin: { left: M, right: M },
+  if (isRet()) doc.autoTable({ startY: yy, head: [["Continuidade do trabalho pela equipe", "Resposta", "Comentário"]], body: CONT_Q.map((q, i) => [q, S.cont[i] || "-", S.contObs[i] || ""]), styles: { fontSize: 8.5 }, headStyles: { fillColor: BR }, columnStyles: { 1: { cellWidth: 20, fontStyle: "bold" } }, margin: { left: M, right: M },
     didParseCell: d => { if (d.section === "body" && d.column.index === 1) d.cell.styles.textColor = d.cell.raw === "Sim" ? [31, 122, 63] : d.cell.raw === "Parcial" ? [154, 98, 0] : d.cell.raw === "Não" ? [179, 38, 30] : [110, 110, 110]; } });
-  if (S.parecer) { yy = doc.lastAutoTable.finalY + 8; if (yy > 260) { doc.addPage(); yy = head(); } doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Parecer geral", M, yy); doc.setFont("helvetica", "normal"); doc.setFontSize(9); const l = doc.splitTextToSize(S.parecer, W - 2 * M); doc.text(l, M, yy + 5); }
-  const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(120); doc.text(`NutriSaúde · Retorno de Qualidade · página ${i}/${np}`, M, 292); }
-  const fname = `Retorno_${(a.unidade || I.unidade || "unidade").replace(/[^\wÀ-ú-]+/g, "_")}_${I.dataVisita || ""}.pdf`;
+  if (S.parecer) { yy = doc.lastAutoTable.finalY + 8; if (yy > 260) { doc.addPage(); yy = head(); } doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text(TXT[S.modo].par, M, yy); doc.setFont("helvetica", "normal"); doc.setFontSize(9); const l = doc.splitTextToSize(S.parecer, W - 2 * M); doc.text(l, M, yy + 5); }
+  const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(120); doc.text(`NutriSaúde · ${TXT[S.modo].t} · página ${i}/${np}`, M, 292); }
+  const fname = `${isRet() ? "Retorno" : "Entrega"}_${(a.unidade || I.unidade || "unidade").replace(/[^\wÀ-ú-]+/g, "_")}_${I.dataVisita || ""}.pdf`;
   return { doc, fname };
 }
 
@@ -417,17 +467,19 @@ $("#sendBtn").onclick = async () => {
   set("apoio", I.apoio); set("gestora", I.gestora); set("dataVisita", I.dataVisita);
   set("itens", JSON.stringify(a.ncs.slice().sort(ordem).map(n => { const r = ref(n.id); return { id: n.id, status: S.st[n.id] || "", acao: S.acao[n.id] || "", bloco: r.bloco, n: r.n, texto: r.texto.slice(0, 180) }; })));
   set("continuidade", JSON.stringify(CONT_Q.map((q, i) => ({ q, r: S.cont[i] || "", obs: S.contObs[i] || "" }))));
+  set("modo", S.modo); set("fotosItens", JSON.stringify(Object.fromEntries(Object.entries(S.fotos).filter(([k, v]) => v && v.length).map(([k, v]) => [k, v.slice(0, 3)]))));
+  set("continuidade", isRet() ? JSON.stringify(CONT_Q.map((q, i) => ({ q, r: S.cont[i] || "", obs: S.contObs[i] || "" }))) : "[]");
   set("parecer", S.parecer || ""); set("filename", fname); set("pdfBase64", doc.output("datauristring"));
   btn.textContent = "Enviando…";
   let done = false; const fin = () => { if (done) return; done = true; btn.disabled = false; btn.textContent = "Enviar por e-mail (PDF)";
-    msg.innerHTML = `<div class="msg ok">Retorno enviado. ${c.corrigido} de ${c.tot} itens corrigidos (${c.tot ? Math.round(c.corrigido / c.tot * 100) : 0}%).</div><div class="actions" style="margin-top:10px"><button class="btn" id="novo">Iniciar novo retorno</button></div>`;
+    msg.innerHTML = `<div class="msg ok">${isRet() ? "Retorno enviado" : "Entrega enviada"}. ${c.corrigido} de ${c.tot} itens ${isRet() ? "conformes" : "corrigidos"} (${c.tot ? Math.round(c.corrigido / c.tot * 100) : 0}%).</div><div class="actions" style="margin-top:10px"><button class="btn" id="novo">Iniciar novo registro</button></div>`;
     $("#novo").onclick = () => { S = blank(); saveDraft(); audU = null; fillIdent(); $("#audBox").hidden = true; render(); window.scrollTo({ top: 0 }); }; };
   $("#hiddenSendFrame").onload = fin; setTimeout(fin, 20000); f.submit();
 };
 $("#clearBtn").onclick = e => { const b = e.target; if (b.dataset.armed) { S = blank(); saveDraft(); audU = null; fillIdent(); $("#audBox").hidden = true; render(); toast("Formulário limpo."); delete b.dataset.armed; b.textContent = "Limpar formulário"; } else { b.dataset.armed = 1; b.textContent = "Toque de novo para confirmar"; setTimeout(() => { delete b.dataset.armed; b.textContent = "Limpar formulário"; }, 4000); } };
 
 function fillIdent() { for (const k of ["unidade", "apoio", "gestora", "dataVisita"]) $("#f-" + k).value = S.ident[k] || ""; }
-fillIdent(); if (S.aud) { renderAud(); render(); } consultaAud(); updSum();
+fillIdent(); renderModo(); if (S.aud) { renderAud(); render(); } consultaAud(); updSum();
 </script>
 
 </body>
