@@ -381,7 +381,10 @@ function submit(){
   set("unidade",I.unidade.trim());set("gestor",I.gestor);set("mes",I.mes);set("auditor",I.auditor);
   set("resultadoBP",fmtPct(bp.pct)+" - "+band(bp.pct).lab);set("resultadoEF",fmtPct(ef.pct)+" - "+band(ef.pct).lab);
   set("resumo",resumo);
-  set("dados",JSON.stringify(["bp","ef"].map(p=>{const R=scorePart(p);return {nome:PARTS[p].name,pct:R.pct,lab:band(R.pct).lab,secs:PARTS[p].s.map((s,si)=>({nome:cap(s.t),pct:R.secs[si].pct,zerada:!!R.secs[si].zeroed}))};})));set("obsGeral",S.obsGeral||"");set("filename",fname);set("pdfBase64",doc.output("datauristring"));
+  set("dados",JSON.stringify(["bp","ef"].map(p=>{const R=scorePart(p);let fotos=0;
+    const secs=PARTS[p].s.map((s,si)=>{let na=0,nc=0,nr=0;s.q.forEach((_,qi)=>{const id=qid(p,si,qi),v=S.ans[id];if(v==="na")na++;else if(v===0)nc++;else if(v===undefined)nr++;fotos+=(S.fotos[id]||[]).length;});const r=R.secs[si];return {nome:cap(s.t),pct:r.pct,pp:r.C,pr:r.D,na,nc,nr,zerada:!!r.zeroed};});
+    const tot=secs.reduce((o,s)=>{["pp","pr","na","nc","nr"].forEach(k=>o[k]+=s[k]);return o;},{pp:0,pr:0,na:0,nc:0,nr:0});
+    return {nome:PARTS[p].name,codigo:PARTS[p].code,pct:R.pct,lab:band(R.pct).lab,secs,tot,fotos};})));
   let done=false; const fr=$("#hiddenSendFrame");
   const finish=()=>{if(done)return;done=true;btn.disabled=false;btn.textContent="Enviar por e-mail (PDF)";
     msg.innerHTML=`<div class="msg ok">Checklist enviado para a coordenação. Resultado BP ${fmtPct(bp.pct)} · EF ${fmtPct(ef.pct)}.</div><div class="actions" style="margin-top:10px"><button class="btn" id="newA">Iniciar nova auditoria</button></div>`;
