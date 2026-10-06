@@ -1,0 +1,434 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Retorno de Qualidade</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700&family=Public+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap">
+<style>
+/* Layout: prancheta de auditoria — cabeçalho fixo com nota ao vivo, abas por relatório, cartões de seção empilhados (mobile primeiro) */
+:root{
+  --bg:#f3f5f4; --surface:#ffffff; --sunk:#e8ecea; --fg:#17201d; --muted:#5b6762; --line:#d5dcd8;
+  --accent:#0d5c55; --accent-ink:#ffffff; --accent-soft:#d8ebe8;
+  --ok:#1f7a3f; --ok-soft:#dcf0e2; --bad:#b3261e; --bad-soft:#f8dedb; --warn:#9a6200; --warn-soft:#fbecc8; --na:#5b6762; --na-soft:#e4e8e6;
+  --gold:#a8790f;
+  --f-display:"Bricolage Grotesque",system-ui,sans-serif; --f-body:"Public Sans",system-ui,-apple-system,"Segoe UI",sans-serif; --f-mono:"IBM Plex Mono",ui-monospace,Menlo,monospace;
+  --r:10px;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --bg:#101614; --surface:#18201d; --sunk:#202a26; --fg:#e6ece9; --muted:#9aa8a2; --line:#2e3a35;
+  --accent:#5cc2b6; --accent-ink:#06201d; --accent-soft:#183a36;
+  --ok:#6fd08f; --ok-soft:#173523; --bad:#ff8a80; --bad-soft:#3d1b19; --warn:#f2bf55; --warn-soft:#3a2d10; --na:#a6b1ac; --na-soft:#26302c; --gold:#e3b24a; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#101614; --surface:#18201d; --sunk:#202a26; --fg:#e6ece9; --muted:#9aa8a2; --line:#2e3a35;
+  --accent:#5cc2b6; --accent-ink:#06201d; --accent-soft:#183a36;
+  --ok:#6fd08f; --ok-soft:#173523; --bad:#ff8a80; --bad-soft:#3d1b19; --warn:#f2bf55; --warn-soft:#3a2d10; --na:#a6b1ac; --na-soft:#26302c; --gold:#e3b24a; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+body{margin:0;background:var(--bg);color:var(--fg);font:15px/1.5 var(--f-body);padding-inline:16px;padding-block:0 96px}
+.wrap{max-width:820px;margin:0 auto}
+h1,h2,h3{font-family:var(--f-display);text-wrap:balance;margin:0;line-height:1.15}
+button{font:inherit;cursor:pointer}
+button:focus-visible,input:focus-visible,textarea:focus-visible,select:focus-visible{outline:3px solid var(--accent);outline-offset:2px}
+.num{font-family:var(--f-mono);font-variant-numeric:tabular-nums}
+
+/* top bar */
+.top{position:sticky;top:env(safe-area-inset-top,0px);z-index:20;background:var(--bg);margin-inline:-16px;padding:10px 16px 0;border-bottom:1px solid var(--line)}
+.top-row{display:flex;align-items:center;gap:12px;justify-content:space-between;max-width:820px;margin:0 auto}
+.brand{min-width:0}
+.brand small{display:block;font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--muted);font-weight:600}
+.brand h1{font-size:19px}
+.score{display:flex;align-items:baseline;gap:6px;padding:6px 10px;border-radius:999px;background:var(--surface);border:1px solid var(--line);white-space:nowrap}
+.score b{font-family:var(--f-mono);font-size:17px}
+.score span{font-size:12px;color:var(--muted)}
+.tabs{display:flex;gap:4px;max-width:820px;margin:8px auto 0;overflow-x:auto;scrollbar-width:none}
+.tab{border:0;background:none;padding:9px 12px;color:var(--muted);font-weight:600;font-size:14px;border-bottom:3px solid transparent;white-space:nowrap}
+.tab[aria-selected="true"]{color:var(--fg);border-bottom-color:var(--accent)}
+.tab .pill{font-family:var(--f-mono);font-size:11px;margin-left:6px;color:var(--muted)}
+.progress{height:3px;background:var(--sunk);margin-inline:-16px}
+.progress i{display:block;height:100%;background:var(--accent);width:0;transition:width .3s}
+
+/* forms */
+.card{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);padding:16px}
+.grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:12px}
+label.f{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:600;color:var(--muted);letter-spacing:.03em;text-transform:uppercase}
+input[type=text],input[type=month],textarea,select{font:15px var(--f-body);color:var(--fg);background:var(--bg);border:1px solid var(--line);border-radius:8px;padding:10px 11px;width:100%;text-transform:none;letter-spacing:0}
+textarea{resize:vertical;min-height:44px}
+.legend{display:flex;flex-wrap:wrap;gap:8px 16px;font-size:13px;color:var(--muted);margin-top:12px}
+.legend span{display:inline-flex;align-items:center;gap:6px}
+.dot{width:10px;height:10px;border-radius:3px;display:inline-block}
+section.stack{display:flex;flex-direction:column;gap:14px;margin-top:16px}
+
+/* sections */
+.sec{background:var(--surface);border:1px solid var(--line);border-radius:var(--r);overflow:hidden}
+.sec-h{display:flex;gap:12px;align-items:center;justify-content:space-between;padding:14px 16px;border:0;background:none;width:100%;text-align:left;color:var(--fg)}
+.sec-h h3{font-size:15px;letter-spacing:.02em;min-width:0}
+.sec-h .meta{display:flex;align-items:center;gap:8px;flex-shrink:0}
+.sec-h .cnt{font-size:12px;color:var(--muted)}
+.chev{transition:transform .2s;color:var(--muted)}
+.sec[data-open="false"] .chev{transform:rotate(-90deg)}
+.sec[data-open="false"] .qs{display:none}
+.rule{font-size:12.5px;color:var(--gold);padding:0 16px 10px;display:flex;gap:6px;align-items:flex-start}
+.badge{font-family:var(--f-mono);font-size:12px;padding:3px 8px;border-radius:999px;font-weight:500}
+.b-ok{background:var(--ok-soft);color:var(--ok)}.b-warn{background:var(--warn-soft);color:var(--warn)}.b-bad{background:var(--bad-soft);color:var(--bad)}.b-na{background:var(--na-soft);color:var(--na)}
+.q{border-top:1px solid var(--line);padding:14px 16px;display:flex;flex-direction:column;gap:10px}
+.q[data-v="0"]{box-shadow:inset 3px 0 0 var(--bad)}
+.prev{font-size:12.5px;line-height:1.4;padding:7px 10px;border-radius:7px;background:var(--warn-soft);color:var(--warn)}
+.prev.alert{background:var(--bad);color:#fff;font-weight:600}
+.reinc{border-radius:8px;padding:10px 12px;font-size:13.5px;background:var(--warn-soft);color:var(--fg);margin-top:12px}
+.reinc.err{background:var(--sunk);color:var(--muted)}
+.reinc strong{color:var(--warn)}
+.reinc .lst{display:flex;flex-wrap:wrap;gap:4px 10px;margin-top:6px}
+.reinc .lst button{text-align:left;border:0;background:none;padding:0;color:var(--accent);text-decoration:underline;font-size:12.5px}
+.reinc .now{margin-top:6px;color:var(--bad);font-weight:700}
+.q[data-v="1"]{box-shadow:inset 3px 0 0 var(--ok)}
+.q[data-v="na"]{box-shadow:inset 3px 0 0 var(--na)}
+.qt{display:flex;gap:10px}
+.qn{font-family:var(--f-mono);font-size:12px;color:var(--muted);padding-top:2px;min-width:22px}
+.qt p{margin:0;min-width:0}
+.gold{display:inline-block;font-size:10.5px;font-weight:700;letter-spacing:.06em;text-transform:uppercase;color:var(--gold);border:1px solid var(--gold);border-radius:4px;padding:0 5px;margin-left:6px;vertical-align:2px}
+.ans{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:420px}
+.ans button{border:1.5px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:10px 6px;font-weight:600;font-size:14px;line-height:1.2}
+.ans button small{display:block;font-weight:500;font-size:11px;color:var(--muted)}
+.ans button[aria-pressed="true"][data-v="1"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.ans button[aria-pressed="true"][data-v="0"]{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.ans button[aria-pressed="true"][data-v="na"]{background:var(--na-soft);border-color:var(--na);color:var(--na)}
+.ans button[aria-pressed="true"] small{color:inherit}
+.extra{display:flex;gap:8px;flex-wrap:wrap;align-items:flex-start}
+.extra textarea{flex:1 1 100%;min-height:42px;font-size:14px}
+.photo-btn{display:inline-flex;align-items:center;gap:6px;border:1.5px dashed var(--line);background:none;color:var(--muted);border-radius:8px;padding:9px 12px;font-size:13px;font-weight:600;position:relative}
+.photo-btn input{position:absolute;inset:0;opacity:0;cursor:pointer}
+.thumbs{display:flex;gap:8px;flex-wrap:wrap}
+.thumb{position:relative;width:72px;height:72px;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.thumb img{width:100%;height:100%;object-fit:cover}
+.thumb button{position:absolute;top:2px;right:2px;width:22px;height:22px;border-radius:50%;border:0;background:rgba(0,0,0,.6);color:#fff;font-size:13px;line-height:1}
+
+/* summary */
+.sumhead{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.big{padding:18px}
+.big .lab{font-size:12px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted);font-weight:600}
+.big .val{font-family:var(--f-display);font-size:40px;font-weight:700;line-height:1.1;margin-top:4px}
+.big .st{margin-top:6px}
+table.res{width:100%;border-collapse:collapse;font-size:14px}
+table.res td,table.res th{padding:8px 6px;border-bottom:1px solid var(--line);text-align:left}
+table.res th{font-size:11px;text-transform:uppercase;letter-spacing:.06em;color:var(--muted)}
+table.res td.r,table.res th.r{text-align:right}
+.bar{height:6px;border-radius:3px;background:var(--sunk);overflow:hidden;min-width:60px}
+.bar i{display:block;height:100%}
+.tw{overflow-x:auto}
+.pend{font-size:13px;color:var(--warn);margin:8px 0 0}
+.pend button{border:0;background:none;color:var(--accent);text-decoration:underline;padding:0;font-size:13px}
+
+.member{display:grid;grid-template-columns:1fr 1fr;gap:10px;padding:12px;border:1px solid var(--line);border-radius:8px;background:var(--bg)}
+.member .sig{grid-column:1/-1}
+.sigpad{width:100%;height:120px;border:1px dashed var(--line);border-radius:8px;background:var(--surface);touch-action:none;display:block}
+.sigrow{display:flex;justify-content:space-between;align-items:center;font-size:12px;color:var(--muted);margin-top:4px}
+.link{border:0;background:none;color:var(--accent);font-weight:600;padding:4px 0;font-size:13px}
+.danger{color:var(--bad)}
+@media (max-width:520px){.member{grid-template-columns:1fr}}
+
+.btn{border:0;border-radius:10px;padding:13px 18px;font-weight:700;font-size:15px;background:var(--accent);color:var(--accent-ink)}
+.btn:disabled{opacity:.5;cursor:not-allowed}
+.btn.sec2{background:var(--surface);color:var(--fg);border:1.5px solid var(--line)}
+.actions{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.note{font-size:13px;color:var(--muted)}
+.msg{padding:12px 14px;border-radius:8px;font-size:14px}
+.msg.ok{background:var(--ok-soft);color:var(--ok)}.msg.err{background:var(--bad-soft);color:var(--bad)}.msg.info{background:var(--accent-soft);color:var(--fg)}
+
+/* history */
+.hist{display:flex;flex-direction:column;gap:10px}
+.hi{display:grid;grid-template-columns:1fr auto;gap:6px 12px;align-items:center}
+.hi h3{font-size:16px}
+.hi .sub{font-size:13px;color:var(--muted)}
+.hi .scores{display:flex;gap:6px;flex-wrap:wrap}
+.hi .acts{grid-column:1/-1;display:flex;gap:14px;flex-wrap:wrap}
+.empty{text-align:center;padding:32px 16px;color:var(--muted)}
+.empty h3{color:var(--fg);font-size:18px;margin-bottom:6px}
+
+.fab{position:fixed;left:0;right:0;bottom:0;padding:10px 16px calc(10px + env(safe-area-inset-bottom,0px));background:var(--surface);border-top:1px solid var(--line);z-index:15}
+.fab .wrap{display:flex;gap:10px;justify-content:space-between;align-items:center}
+.toast{position:fixed;left:50%;bottom:84px;transform:translateX(-50%);background:var(--fg);color:var(--bg);padding:10px 16px;border-radius:999px;font-size:14px;z-index:30;max-width:calc(100% - 32px)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+
+.aud{margin-top:12px;border-radius:8px;padding:10px 12px;font-size:13.5px}
+.aud.ok{background:var(--accent-soft)}.aud.err{background:var(--bad-soft);color:var(--bad)}.aud.wait{background:var(--sunk);color:var(--muted)}
+.aud a{color:var(--accent)}
+.q[data-st="corrigido"]{box-shadow:inset 3px 0 0 var(--ok)}.q[data-st="parcial"]{box-shadow:inset 3px 0 0 var(--warn)}.q[data-st="pendente"]{box-shadow:inset 3px 0 0 var(--bad)}
+.antes{background:var(--sunk);border-radius:8px;padding:8px 10px}
+.antes .lab{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--muted);font-weight:600}
+.antes .obs{font-size:13.5px;margin-top:2px}.antes .obs.vazio{color:var(--muted);font-style:italic}
+.antes .thumbs{margin-top:6px}
+.thumb .ld{display:flex;align-items:center;justify-content:center;height:100%;font-size:11px;color:var(--muted);background:var(--bg)}
+.ans3{display:grid;grid-template-columns:repeat(3,1fr);gap:6px;max-width:460px}
+.ans3 button{border:1.5px solid var(--line);background:var(--bg);color:var(--fg);border-radius:8px;padding:10px 6px;font-weight:600;font-size:13.5px}
+.ans3 button[aria-pressed="true"][data-v="corrigido"],.ans3 button[aria-pressed="true"][data-v="Sim"]{background:var(--ok-soft);border-color:var(--ok);color:var(--ok)}
+.ans3 button[aria-pressed="true"][data-v="parcial"],.ans3 button[aria-pressed="true"][data-v="Parcial"]{background:var(--warn-soft);border-color:var(--warn);color:var(--warn)}
+.ans3 button[aria-pressed="true"][data-v="pendente"],.ans3 button[aria-pressed="true"][data-v="Não"]{background:var(--bad-soft);border-color:var(--bad);color:var(--bad)}
+.ans3.small{max-width:300px}.ans3.small button{padding:7px 4px;font-size:13px}
+.q textarea{font-size:14px}
+.cq{display:flex;flex-direction:column;gap:6px;padding-bottom:12px;border-bottom:1px solid var(--line)}
+.sumrow{display:flex;flex-wrap:wrap;gap:10px}
+.sc{flex:1 1 110px;border:1px solid var(--line);border-radius:8px;padding:10px;text-align:center}
+.sc b{display:block;font-family:var(--f-display);font-size:26px}.sc span{font-size:12px;color:var(--muted)}
+.sc.ok b{color:var(--ok)}.sc.warn b{color:var(--warn)}.sc.bad b{color:var(--bad)}
+.sec-h .cnt{font-size:12px;color:var(--muted)}
+</style>
+</head>
+<body>
+<div class="top">
+  <div class="top-row">
+    <div class="brand"><small>NutriSaúde · Qualidade</small><h1>Retorno de Qualidade</h1></div>
+    <div class="score" title="Itens avaliados no retorno"><b id="topScore" class="num">—</b><span>itens</span></div>
+  </div>
+  <div class="progress" style="margin-top:10px"><i id="prog"></i></div>
+</div>
+
+<main class="wrap">
+  <section class="stack">
+    <div class="card">
+      <p class="note" style="margin:0 0 12px">Visita de retorno após a auditoria: para cada item que ficou não conforme, registre como está agora e a ação feita.</p>
+      <div class="grid">
+        <label class="f">Unidade<input type="text" id="f-unidade" list="units" autocomplete="off" placeholder="Ex.: Unimed Jaú"></label>
+        <label class="f">Responsável pela visita<input type="text" id="f-apoio" autocomplete="off"></label>
+        <label class="f">Gestora da unidade<input type="text" id="f-gestora" autocomplete="off"></label>
+        <label class="f">Data da visita<input type="date" id="f-dataVisita"></label>
+      </div>
+      <datalist id="units"><option value="BTG 8"><option value="BTG 1"><option value="HWASHIN"><option value="Ribeirão"><option value="Reckitt"></datalist>
+      <div id="audBox" class="aud" hidden aria-live="polite"></div>
+    </div>
+  </section>
+
+  <section class="stack" id="itens"></section>
+
+  <section class="stack" id="contSec" hidden>
+    <div class="card">
+      <h2 style="font-size:17px;margin-bottom:4px">Continuidade do trabalho pela equipe</h2>
+      <p class="note" style="margin:0 0 10px">Como a equipe está dando sequência ao que foi orientado.</p>
+      <div id="cont" style="display:flex;flex-direction:column;gap:12px"></div>
+      <label class="f" style="margin-top:14px">Parecer geral da visita<textarea id="parecer" rows="4" placeholder="Resumo da evolução, pendências e próximos passos"></textarea></label>
+    </div>
+    <div class="card">
+      <div class="sumrow" id="resumo"></div>
+      <div class="actions" style="margin-top:14px"><button class="btn" id="sendBtn">Enviar por e-mail (PDF)</button><button class="btn sec2" id="pdfBtn">Baixar PDF</button><button class="link danger" id="clearBtn">Limpar formulário</button></div>
+      <div id="sendMsg" style="margin-top:12px"></div>
+    </div>
+  </section>
+</main>
+<div class="toast" id="toast" hidden></div>
+<iframe name="hiddenSendFrame" id="hiddenSendFrame" title="envio" style="display:none"></iframe>
+<form id="pdfSendForm" method="POST" target="hiddenSendFrame" style="display:none">
+  <input type="hidden" name="tipo" value="retorno"><input type="hidden" name="unidade"><input type="hidden" name="auditoriaId"><input type="hidden" name="auditoriaData"><input type="hidden" name="auditoriaNota">
+  <input type="hidden" name="apoio"><input type="hidden" name="gestora"><input type="hidden" name="dataVisita"><input type="hidden" name="itens"><input type="hidden" name="continuidade"><input type="hidden" name="parecer">
+  <input type="hidden" name="filename"><input type="hidden" name="pdfBase64">
+</form>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<script>
+const APPS_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbwdo9oHLD4uZlKwqpC2TdtovsUewgumtGgQ1BlrpfK-ptlubZO5VxbiRaBhvQP54DdEXg/exec";
+const QUESTOES = {"bp": [{"t": "Armazenamento em Temperatura Ambiente (Estoque)", "q": ["Os produtos estão armazenados sobre paletes, prateleiras e/ ou estrados e respeitando as distâncias necessárias do forro, das paredes e do piso?", "Os produtos estão com as embalagens integras? (não estão furadas, amasadas ou estufadas)", "Produtos abertos estão armazenados evitando o risco de contaminação com as embalagens vedadas?", "Produtos abertos estão com as etiquetas preenchidas corretamente e completamente? As informações do fabricante estão sendo respeitadas?", "Produtos improprios para o consumo estão devidamente identificados e separados de outros produtos?", "Não há produtos com data de validade vencida? (produtos abertos a mais de um mês e produtos sem identificação são considerados com data de validade vencida). Obs.: Produto químicos/ limpeza também serão considerados na avaliação.", "O sistema semáforo/ PVPS está sendo aplicado com eficácia? O adesivo está visível a todos?", "Caixas de madeira ou papelão estão devidamente protegidas por saco plástico?", "Os gêneros estão armazenados no estoque de acordo com suas características e recomendações do fabricante?"]}, {"t": "Armazenamento em Temperatura Controlada (Freeze/Geladeira)", "q": ["Alimentos pré-preparados (carnes temperadas, sobremesas, saladas) são armazenados corretamente evitando contaminações?", "Alimentos pré-preparados (carnes temperadas, sobremesas, saladas) estão identificados? Etiquetas preenchidas corretamente e completamente? (situação válida também para produtos em descongelamento).", "Produtos abertos estão armazenados evitando o risco de contaminação? (embalagens vedadas)", "Produtos abertos estão com as etiquetas preenchidas corretamente e completamente? As informações do fabricante estão sendo respeitadas?", "Não há produtos com data de validade vencida? Produtos abertos a mais de um mês e sem identificação são considerados com data de validade vencida.", "Os gêneros estão armazenados no estoque de acordo com suas características e recomendações do fabricante?"]}, {"t": "Recebimento", "q": ["O profissional que recebe as mercadorias tem conhecimento dos critérios de recebimento?", "São verificadas as condições do transporte e se a refrigeração do caminhão está ligadado até o momento da entrega?", "Os visitantes (forncedores, entregadores e prestadores de serviços) seguem orientações sanitárias quando entram na cozinha? Não há cruzamento de pessoas sem uniforme no interior da cozinha?", "Produtos para devolução são devolvidos imediatamente ou identificados e guardados em local específico sinalizado?"]}, {"t": "Pré-Preparo/Preparo", "q": ["A desinfecção de hortifruti está sendo feita de maneira correta? Há relógio ou outra forma de controle do tempo de contato (temporizador)?", "Existe adesivo com o passo a passo da desinfecção de hortifruti? As orientações correspondem ao produto utilizado? Ele está em local estratégico?", "O descongelamento de carnes é feito sob refrigeração?", "As caixas plásticas/ cubas para descongelamento ou desinfecção de hortifruti estão identificadas? As caixas são exclusivas para este procedimento?", "A manipulação de carnes não excede mais que 30 minutos em temperatura ambiente? É feita em lote?", "Os procedimentos de pré-preparo evitam a contaminação cruzada entre alimentos crus, semi preparados e prontos para o consumo?", "No preparo de carnes (chapa) são usados dois pegadores (carne crua/ carne grelhada) ou luva descartável (usada de forma correta e descartada na troca de função)? Na mesma chapa não são colocadas carnes cruas com carnes já grelhadas?", "Os alimentos prontos são manipulados com utilização de luvas descartáveis? As luvas são usadas da forma correta e descartadas imediatamente após o uso ou troca de função?", "Existe ausência de alimentos preparados em temperatura ambiente por mais de 30 minutos?", "As cores das tábuas são respeitadas? (verde: hortifruti, vermelha: carnes em geral, branca: alimentos prontos)", "As preparações não estão ficando prontas com muita antecedência?"]}, {"t": "Distribuição", "q": ["Os alimentos em espera para distribuição estão protegidos contra contaminações?", "Os alimentos aguardam a distribuição em equipamento que conserve a sua temperatura na faixa de segurança? (câmara, geladeira, passthrough, banho-maria, forno?).", "Os balcões são ligados com antecedência para atingir a temperatura adequada? Os balcões estão funcionando?", "Existe procedimento para evitar a contaminação dos alimentos durante a distribuição? Na interrupção da fila as cubas/ panelas são mantidas tampada?", "Não existem indícios/ sinais de reaproveitamento de alimentos? Não há alimentos prontos do cardápio ou turno anterior na câmara ou passthrough? (Por exemplo: usar alimentos no jantar que foram produzidos no almoço, caracteriza reaproveitamentos)", "A temperatura dos alimentos é mantida até o final da distribuição?", "Os itens programados foram suficiente até final da distribuição? Não houve substituição do cardápio principal apresentado ao cliente?"]}, {"t": "Coleta de Amostras", "q": ["Há coleta de todos os itens de todos os dias e todos os turnos?", "O procedimento de coleta de amostra está sendo realizada de maneira correta? O preenchimento das informações do saco de amostras estão corrretas ? As amostras possuem 100 gramas?", "O armazenamento das amostras está correto? O prazo de 96h (SP) ou 72h (a depender do MBP) de armazenamento está sendo respeitado?"]}, {"t": "Equipamentos, Móveis e Utensílios", "q": ["As tábuas de corte estão em bom estado de conservação e limpeza?", "As panelas, assadeiras, pegadores, canecões, cubas estão sem incrustações e bom estado de conservação?", "As prateleiras (estoque e produção) estão em bom estado de conservação e sem amassados e ou ferrugem?", "O sistema de exaustão (coifas/ exastores de parede) estão funcionando?", "Os equipamentos de refrigeração (geladeiras/ freezer) estão em bom estado de conservação (prateleiras/ assoalho sem ferrugem, borrachas de vedação em boas condições)?", "A balança está conservada (sem ferrugem e descascamento) e em boas condições de higiene? Está em local fixo? Está adequada para pesagem dos produtos recebidos?"]}, {"t": "Limpeza e Organização", "q": ["Todos os locais são mantidos limpos e organizados (atrás de equipamentos, bancadas, tomadas, interruptores, portas e prateleiras)?", "As esponjas estão bom estado de conservação? Estão armazenadas em local limpo e seco?", "O restaurante está sendo limpo (inclusive durante a distribuição)?", "Há borrifadores em todas as áreas ? São mantidos limpos? Estão identificados com etiquetas?", "O estoque está organizado e limpo (piso, prateleiras, paredes e embalagens?", "Sanitários e vestiários estão limpos e organizados?", "Mesa e materiais de uso da gestora estão em boas condições de limpeza e organização?", "Vassouras e outros utensílios de limpeza estão em bom estado? Guardados em local adequado e são diferentes dos usados em vestiários e sanitários?", "Aventais são guardados em locais próprios?", "É feita a desinfecção com álcool 70% das bancadas e demais superfícies?", "Armadilhas de pisos estão protegidas? Armadilhas luminosas/ cola/ elétricas estão limpas e em bom estado?", "Cortinas/ exaustores de ar estão em bom estado de limpeza e funcionamento?", "Não existem caixas de papelão, materiais de madeira ou caixas plásticas (fornecedores) sujas no interior da cozinha?", "A pia de higiene das mãos está em boas condições de higiene? Está abastecida com todos os itens necessários? Há adesivo com orientações?", "A luva de malha de aço está sendo higienizada de acordo com o MBP? (sem resíduos de alimentos). Está armazenada em local limpo e seco?", "A geladeira/ câmara/ freezer/ câmara fria estão em boas condições de higiene?", "Equipamentos que não estão sendo usados são mantidos cobertos com saco plástico?", "Os equipamentos em geral estão em bom estado de conservação e limpeza? (cabrita, descascador/ processador de legumes, coifa sem gotejamento de gordura, bicos do fogão, forno, fogão, etc.)", "A caixa/ cuba onde são guardados os utensílios na produção e distribuição estão limpas? (sem acúmulo de água e resíduos)", "Os termômetro estão em boas condições de higiene? São guardados em local apropriado e exclusivo?", "Os hortifrutis são transferidos para caixas plástica previamente higienizadas?"]}, {"t": "Manipuladores", "q": ["Há ausência de profissionais com ferimentos nas mãos e/ ou micose nas unhas?", "Os profissionais e gestora não usam adornos (esmalte, extensão de unha/ unha postiça, aliança, brinco, piercing, maquiagem ou cílios postiços/extensões)? Usam corretamente a poteção para os cabelos?", "Todos os profissionais estão uniformizados (uniforme completo)? O uniforme é mantido limpo?", "Os profissionais não falam, cantam, espirram sobre as preparações? Eles não comem durante a produção de alimentos?", "Há frequência na higiene das mãos? (Seguindo o procedimento como descrito no cartaz)."]}, {"t": "Manejo de Resíduos", "q": ["Os coletores de lixo estão limpos, em locais adequados, com sacos plásticos resistentes e pedais funcionando?", "Quando há cruzamento da saída do lixo e matérias-primas são determinados horários diferentes? Os lixos são retirados com frequência?", "O óleo usado é recolhido por fornecedor autorizado? Há recibo de coleta com data e quantidade coletada?"]}, {"t": "Preenchimento de Planilhas", "q": ["O FOR PRD 02 - Recebimento de Perecíveis está sendo preenchida completamente e corretamente (sem preenchimento britânico)? As conferências necessárias (validade, temperatura de perecíveis, teste de amônia e avaliação sensorial) são realizadas?", "O FOR PRD 10 - Controle de Temperatura de Equipamentos: está sendo preenchida corretamente e completamente (sem preenchimento britânico)?", "O FOR PRD 11 - Controle de Temperatura de Alimentos em Distribuição está sendo preenchida corretamente e completamente (sem preenchimento britânico)? As anotações correspondem ao que foi produzido no dia?", "O FOR PRD 14 - Controle de Temperatura de Alimentos em Produção está sendo preenchida corretamente e completamente (sem preenchimento britânico)? As anotações correspondem ao que foi produzido no dia?", "O FOR PRD 05 - Avaliação Sensorial está preenchida corretamente em todos os períodos? As anotações correspondem ao que foi produzido no dia?", "FOR PRD 21 - Controle de sobra Limpa e Resto Injesta: está sendo preenchida corretamente e completamente (sem preenchimento britânico)?", "FOR PRD 01/ 03/ 09 - Controle de Rotina de Limpeza: estão preenchido completamento e corretamente (sem preenchimento britânico)?", "FOR PRD 06 - Controle de Diluição de Produtos de Limpeza: está sendo preenchida?"]}, {"t": "Segurança do Trabalho", "q": ["O PGR e PCMSO estão atualizados e arquivados na unidade (aquivo físico ou drive)?", "Todos os profissionais utilizam os EPI's durante as atividades?", "A Ficha de controle de EPI's e uniformes está preenchida corretamente através do sistema Onsafety?", "As FDS's estão em local de fácil acesso para a equipe? Há relação entre a FDS's e os produtos que estão na unidade?", "O FOR SST 18 - As O.S. Estão assinadas em todas as páginas? Fazem parte da pasta dos profissionais? É realizada nova O.S para o caso de mudança de função?", "Os exames de ASO estão em dia e arquivados na pasta dos profissionais? Condizem com a função exercida?", "Os EPIs estão armazenados corretamente? O local para rmazenamento de EPI está devidamente higienizado? Estão em boas condições de uso e limpeza?"]}, {"t": "Laudos", "q": ["O laudo de análise de água está vigente? Está de acordo com a legislação?", "O laudo de limpeza do reservatório de água está vigente?", "O laudo de realização do controle de pragas esta vigente?", "O laudo de calibração de termômetro está vigente?", "O laudo de limpeza da caixa de gordura está vigente?", "Os documentos da empresa de coleta de óleo estão vigentes?", "O laudo da limpeza da coifa está vigente?", "O Alvará de licença sanitária está vigente?", "Os laudos de limpeza de ar condicionado e cortina de ar estão vigentes?"]}, {"t": "Treinamentos", "q": ["As listas de presença em treinamentos estão sendo preenchidas corretamente e completamente através do Sistema Onsafety?", "Há correspondência entre os registros de lista de presença com a planilha FOR GP 08 (Fechamento de Horas de Treinamento)?", "Os treinamentos enviados mensalmente pela área da qualidade estão sendo aplicados (4 treinamentos mensais)?", "Existem evidências de treinamentos sobre uso correto de EPI's? (com a equipe que está na unidade atualmente)?", "Os profissionais são treinados sobre as FDS's?", "Os profissionais conhecem a polìtica de Qualidade da Nutrisaude?", "Há evidência de treinamento de integração dos novos profissionais?"]}, {"t": "Ambientação/Pesquisa/Apresentação", "q": ["O restaurante de maneira geral, está em boas condições de limpeza (mesas, piso, paredes, janelas, luminárias e proteção do balcão)?", "O balcão de distribuição é mantido limpo e organizado durante todo período de distribuição?", "Os pratos, talheres e bandejas estão bem higienizados e secos?", "As preparações estão dispostas de maneira organizada? Elas se mantéem organizadas até o final de distibuição?", "Os vidros de temperos estão limpos, organizados e etiquetados?", "Foi realizada a pesquisa de satisfação do consumidor na unidade? Está dentro da meta?", "Foi realizada a pesquisa de satisfação do interlocutor na unidade? Está dentro da meta?"]}], "ef": [{"t": "Localização", "q": ["A área externa está livre de objetos em desuso, acúmulo de lixo, entulhos, etc.?"]}, {"t": "Instalações", "q": ["A área de produção é projetada para possibilitar um fluxo ordenado e sem cruzamentos em todas as etapas do processo produtivo (recebimento, armazenamento, pré-preparo, preparo, distribuição, manejo de resíduos)?", "Existe local exclusivo (lavanderia) para higienização de materiais de limpeza (baldes, vassouras, panos de chão)?", "A área de produção é separada por meios físicos ou outro meio para evitar o cruzamento de atividades e contaminação cruzada?", "As instalações elétricas estão embutidas ou protegidas em tubulações externas e íntegras de tal forma a permitir a higienização dos ambientes?", "Há pias exclusivas para a higiene das mãos?", "O retorno de utensílios sujos (devolução) não oferece risco de contaminação dos utensílios limpos?", "Pias para higiene de utensílios estão em boas condições de uso (sem rachaduras, vazamentos)?", "Os encanamentos (escoamento) das pias de higiene de utensílios estão em boas condições de uso (sem entupimentos, retorno de resíduos)? As tubulações são compatíveis com as atividades da unidade?"]}, {"t": "Pisos", "q": ["Possui revestimento liso, impermeável e lavável? Estão íntegros, conservados, livres de rachaduras, trincas, vazamentos, infiltrações?", "Os ralos possuem fechamento automático. Estão em número suficiente?"]}, {"t": "Paredes", "q": ["Possui revestimento liso, impermeável e lavável. Estão íntegras, conservadas, livres de rachaduras, trincas, goteiras, vazamentos, infiltrações, bolores, descascamentos?"]}, {"t": "Teto", "q": ["Possui revestimento liso, impermeável e lavável? Estão íntegros, conservados, livres de rachaduras, trincas, vazamentos, infiltrações?"]}, {"t": "Portas", "q": ["As portas são mantidas ajustadas aos batentes? Possuem mecanismo de fechamento automático? Há proteção na parte inferior, contra insetos e roedores? Estão em bom estado de conservação? Possuem telas de proteção?"]}, {"t": "Janelas", "q": ["São mantidas ajustadas aos batentes? Possuem telas milimétricas? Estão em bom estado de conservação? As telas são removíveis para limpeza?"]}, {"t": "Iluminação", "q": ["A iluminação da área de preparação é adequada? O ambiente não é escuro causando ofuscamentos?", "Os raios solares não incedem diretamente nas bancadas?", "As luminárias localizadas sobre a área de preparação dos alimentos estão protegidas contra explosão ou queda acidental?"]}, {"t": "Ventilação", "q": ["A ventilação natural ou artificial é adequada (de forma a não permitir gases, fumaça, condensação de vapores, ou o surgimento de fungos ou bolores)?", "Os equipamentos de ventilação (coifa, exaustores) estão em bom estado de conservação e limpeza? Estão funcionando?"]}, {"t": "Instalações Sanitárias", "q": ["São dotadas de lavatórios, com acessórios para higienização das mãos (sabonete líquido antisséptico ou sabonete líquido e produto antisséptico e toalhas de papel não reciclado)? Possuem lixeiras dotadas de sacos plásticos e tampa com acionamento por pedal?", "Não se comunicam diretamente com a área de produção e armazenamento de alimentos?", "São separadas por gênero? Possui armários individuais? Possui chuveiros? São de uso exclusivo dos funcionários da Nutrisaude?"]}, {"t": "Estoque", "q": ["O local é exclusivo para armazenamento de alimentos?", "O espaço físico é suficiente para armazenar os alimentos??", "As prateleiras e/ou estrados são de material liso, resistente e impermeáveis e não apresentam pontos de ferrugem?"]}, {"t": "Manejo de Resíduos", "q": ["Os resíduos (lixo) são armazenados em local fechado e isolado da área de preparação e armazenamento dos alimentos?"]}]};
+const CONT_Q = [
+  "A equipe está mantendo as orientações e os treinamentos aplicados?",
+  "A gestora/liderança está acompanhando e cobrando as correções?",
+  "As planilhas e registros estão sendo preenchidos corretamente na rotina?",
+  "As correções feitas se mantiveram desde a última visita?"
+];
+const DRAFT_KEY = "retorno-qualidade-v1";
+const $ = s => document.querySelector(s);
+const esc = s => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmtPct = p => p == null ? "—" : (p * 100).toFixed(1).replace(".", ",") + "%";
+const ST = { corrigido: { l: "Corrigido", i: "✅" }, parcial: { l: "Parcial", i: "🟡" }, pendente: { l: "Pendente", i: "❌" } };
+
+function blank() { return { ident: { unidade: "", apoio: "", gestora: "", dataVisita: new Date().toISOString().slice(0, 10) }, aud: null, st: {}, acao: {}, fotos: {}, cont: {}, contObs: {}, parecer: "" }; }
+let S = blank();
+try { const d = JSON.parse(localStorage.getItem(DRAFT_KEY) || "null"); if (d && d.ident) S = Object.assign(blank(), d); } catch (e) {}
+let saveT; function saveDraft() { clearTimeout(saveT); saveT = setTimeout(() => { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(S)); } catch (e) { try { localStorage.setItem(DRAFT_KEY, JSON.stringify(Object.assign({}, S, { fotos: {} }))); } catch (_) {} } }, 400); }
+const fotoCache = {};
+
+function ref(id) { const [p, si, qi] = id.split("-"); const s = (QUESTOES[p] || [])[+si] || { t: "", q: [] }; return { parte: p === "bp" ? "Boas Práticas" : "Estrutura Física", bloco: s.t, n: +qi + 1, texto: s.q[+qi] || "" }; }
+function ordem(a, b) { const x = a.id.split("-"), y = b.id.split("-"); return (x[0] === y[0] ? 0 : x[0] === "bp" ? -1 : 1) || (+x[1] - +y[1]) || (+x[2] - +y[2]); }
+
+// ---------- busca da auditoria ----------
+let audT, audU = null;
+function consultaAud() {
+  const u = (S.ident.unidade || "").trim(), box = $("#audBox");
+  if (u.length < 2) { box.hidden = true; return; }
+  if (S.aud && S.aud.unidade && S.aud.unidade.toLowerCase() === u.toLowerCase() && audU === null) { renderAud(); return; }
+  if (audU === u.toLowerCase()) return; audU = u.toLowerCase();
+  box.hidden = false; box.className = "aud wait"; box.textContent = `Buscando a última auditoria de ${u}…`;
+  const tentar = (n) => fetch(APPS_SCRIPT_URL + "?auditoria=" + encodeURIComponent(u)).then(r => r.json()).then(d => {
+    if ((S.ident.unidade || "").trim().toLowerCase() !== u.toLowerCase()) return;
+    if (!d.encontrada) { S.aud = null; box.className = "aud err"; box.textContent = `Não há auditoria de ${u} registrada no checklist online. Confira o nome da unidade (igual ao da auditoria).`; render(); return; }
+    if (!S.aud || S.aud.id !== d.id) { S.st = {}; S.acao = {}; S.fotos = {}; }
+    S.aud = d; saveDraft(); renderAud(); render();
+  }).catch(() => { if (n < 1) return setTimeout(() => tentar(n + 1), 2500); audU = null; box.className = "aud err"; box.textContent = "Não foi possível buscar a auditoria agora. Verifique a internet e tente de novo."; });
+  tentar(0);
+}
+function renderAud() {
+  const a = S.aud, box = $("#audBox"); if (!a) return;
+  box.hidden = false; box.className = "aud ok";
+  box.innerHTML = `<strong>Auditoria de ${esc(a.data)}</strong>${a.auditor ? " · " + esc(a.auditor) : ""} · Boas Práticas ${fmtPct(a.bp)}${a.ef != null ? " · Estrutura Física " + fmtPct(a.ef) : ""}<br>${a.ncs.length} ${a.ncs.length === 1 ? "item ficou" : "itens ficaram"} não conforme${a.ncs.length === 1 ? "" : "s"}${a.pdf ? ` · <a href="${esc(a.pdf)}" target="_blank" rel="noopener">abrir PDF da auditoria</a>` : ""}` +
+    (a.retornos && a.retornos.length ? `<div class="note" style="margin-top:4px">Já ${a.retornos.length === 1 ? "existe 1 retorno" : "existem " + a.retornos.length + " retornos"} para esta auditoria (${a.retornos.map(r => r.data).join(", ")}). Um novo envio fica registrado como mais um retorno.</div>` : "");
+}
+
+// ---------- itens ----------
+const openG = {};
+function render() {
+  const el = $("#itens"), a = S.aud;
+  $("#contSec").hidden = !a;
+  if (!a) { el.innerHTML = ""; updSum(); return; }
+  if (!a.ncs.length) { el.innerHTML = `<div class="card msg ok">A última auditoria não teve itens não conformes. Registre só a continuidade abaixo.</div>`; renderCont(); updSum(); return; }
+  const grupos = {};
+  a.ncs.slice().sort(ordem).forEach(n => { const r = ref(n.id), k = r.parte + " · " + r.bloco; (grupos[k] = grupos[k] || []).push({ ...n, ...r }); });
+  el.innerHTML = Object.entries(grupos).map(([k, list], gi) => {
+    const open = openG[k] ?? true;
+    return `<div class="sec" data-open="${open}" data-g="${esc(k)}"><button class="sec-h" data-toggle="${gi}" aria-expanded="${open}"><h3>${esc(k)}</h3><span class="meta"><span class="cnt num" id="gc-${gi}"></span><svg class="chev" width="16" height="16" viewBox="0 0 16 16" fill="none"><path d="M4 6l4 4 4-4" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></span></button>
+      <div class="qs">${list.map(x => itemHtml(x)).join("")}</div></div>`;
+  }).join("");
+  el.querySelectorAll(".sec").forEach((s, gi) => { if (s.dataset.open === "true") carregarFotos(s); });
+  renderCont(); updSum();
+}
+function itemHtml(x) {
+  const id = x.id, st = S.st[id] || "";
+  return `<div class="q" id="q-${id}" data-st="${st}">
+    <div class="qt"><span class="qn">${x.n}.</span><p>${esc(x.texto)}</p></div>
+    <div class="antes"><div class="lab">Como estava · auditoria de ${esc(S.aud.data)}</div>${x.obs ? `<div class="obs">“${esc(x.obs)}”</div>` : `<div class="obs vazio">Sem observação na auditoria.</div>`}
+      ${(x.fotos || []).length ? `<div class="thumbs">${x.fotos.map(f => `<div class="thumb" data-foto="${f}"><span class="ld">foto</span></div>`).join("")}</div>` : ""}</div>
+    <div class="ans3" role="group" aria-label="Situação atual do item">${Object.entries(ST).map(([k, v]) => `<button data-q="${id}" data-v="${k}" aria-pressed="${st === k}">${v.i} ${v.l}</button>`).join("")}</div>
+    <textarea data-acao="${id}" rows="2" placeholder="Ação realizada / como está agora">${esc(S.acao[id] || "")}</textarea>
+    <div class="extra"><span class="photo-btn">📷 Câmera<input type="file" accept="image/*" capture="environment" data-fotod="${id}" aria-label="Tirar foto de como ficou"></span><span class="photo-btn">🖼 Galeria<input type="file" accept="image/*" multiple data-fotod="${id}" aria-label="Escolher fotos de como ficou"></span></div>
+    <div class="thumbs" id="th-${id}">${thumbsD(id)}</div>
+  </div>`;
+}
+function thumbsD(id) { return (S.fotos[id] || []).map((src, i) => `<div class="thumb"><img src="${src}" alt="Como ficou ${i + 1}"><button data-delfoto="${id}" data-i="${i}" aria-label="Remover foto">×</button></div>`).join(""); }
+function carregarFotos(sec) {
+  sec.querySelectorAll(".thumb[data-foto]").forEach(t => {
+    const id = t.dataset.foto; if (t.dataset.loaded) return; t.dataset.loaded = 1;
+    const put = d => { t.innerHTML = `<img src="${d}" alt="Como estava">`; };
+    if (fotoCache[id]) return put(fotoCache[id]);
+    pegarFoto(id).then(d => d ? put(d) : (t.innerHTML = `<span class="ld">sem foto</span>`));
+  });
+}
+function pegarFoto(id) {
+  if (fotoCache[id]) return Promise.resolve(fotoCache[id]);
+  return fetch(APPS_SCRIPT_URL + "?foto=" + encodeURIComponent(id)).then(r => r.json()).then(d => d.data ? (fotoCache[id] = d.data) : null).catch(() => null);
+}
+function renderCont() {
+  $("#cont").innerHTML = CONT_Q.map((q, i) => `<div class="cq"><div>${esc(q)}</div><div class="ans3 small" role="group">${["Sim", "Parcial", "Não"].map(r => `<button data-c="${i}" data-v="${r}" aria-pressed="${S.cont[i] === r}">${r}</button>`).join("")}</div><input type="text" data-cobs="${i}" placeholder="Comentário (opcional)" value="${esc(S.contObs[i] || "")}"></div>`).join("");
+  $("#parecer").value = S.parecer || "";
+}
+function contagem() {
+  const ids = S.aud ? S.aud.ncs.map(n => n.id) : [], c = { corrigido: 0, parcial: 0, pendente: 0, sem: 0, tot: ids.length };
+  ids.forEach(id => { const s = S.st[id]; if (s) c[s]++; else c.sem++; }); return c;
+}
+function updSum() {
+  const c = contagem();
+  $("#topScore").textContent = S.aud ? `${c.tot - c.sem}/${c.tot}` : "—";
+  $("#prog").style.width = c.tot ? ((c.tot - c.sem) / c.tot * 100) + "%" : "0";
+  $("#resumo").innerHTML = S.aud ? `<div class="sc ok"><b>${c.corrigido}</b><span>✅ Corrigidos</span></div><div class="sc warn"><b>${c.parcial}</b><span>🟡 Parciais</span></div><div class="sc bad"><b>${c.pendente}</b><span>❌ Pendentes</span></div><div class="sc"><b>${c.tot ? Math.round(c.corrigido / c.tot * 100) : 0}%</b><span>corrigido</span></div>` +
+    (c.sem ? `<p class="pend" style="flex-basis:100%">${c.sem} ${c.sem === 1 ? "item ainda sem" : "itens ainda sem"} avaliação.</p>` : "") : "";
+  document.querySelectorAll("#itens .sec").forEach((s, gi) => { const qs = [...s.querySelectorAll(".q")]; const done = qs.filter(q => q.dataset.st).length; const gc = $("#gc-" + gi); if (gc) gc.textContent = `${done}/${qs.length}`; });
+}
+
+// ---------- eventos ----------
+document.addEventListener("click", e => {
+  const t = e.target.closest("button"); if (!t) return;
+  if (t.dataset.q) { const id = t.dataset.q, v = t.dataset.v; S.st[id] === v ? delete S.st[id] : S.st[id] = v; const q = $("#q-" + id); q.dataset.st = S.st[id] || ""; q.querySelectorAll(".ans3 button").forEach(b => b.setAttribute("aria-pressed", S.st[id] === b.dataset.v)); updSum(); saveDraft(); return; }
+  if (t.dataset.c) { const i = t.dataset.c, v = t.dataset.v; S.cont[i] === v ? delete S.cont[i] : S.cont[i] = v; t.parentElement.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", S.cont[i] === b.dataset.v)); saveDraft(); return; }
+  if (t.dataset.toggle != null) { const s = t.closest(".sec"), o = s.dataset.open !== "true"; s.dataset.open = o; t.setAttribute("aria-expanded", o); openG[s.dataset.g] = o; if (o) carregarFotos(s); return; }
+  if (t.dataset.delfoto) { const id = t.dataset.delfoto; S.fotos[id].splice(+t.dataset.i, 1); if (!S.fotos[id].length) delete S.fotos[id]; $("#th-" + id).innerHTML = thumbsD(id); saveDraft(); return; }
+});
+document.addEventListener("input", e => {
+  const t = e.target;
+  if (t.dataset.acao) { S.acao[t.dataset.acao] = t.value; saveDraft(); }
+  else if (t.dataset.cobs != null) { S.contObs[t.dataset.cobs] = t.value; saveDraft(); }
+  else if (t.id === "parecer") { S.parecer = t.value; saveDraft(); }
+  else if (t.id && t.id.startsWith("f-")) { S.ident[t.id.slice(2)] = t.value; saveDraft(); if (t.id === "f-unidade") { clearTimeout(audT); audT = setTimeout(consultaAud, 800); } }
+});
+document.addEventListener("change", async e => {
+  const t = e.target; if (!t.dataset.fotod || !t.files.length) return; const id = t.dataset.fotod;
+  for (const f of t.files) { try { (S.fotos[id] = S.fotos[id] || []).push(await compress(f)); } catch (err) { toast("Não foi possível ler essa imagem."); } }
+  t.value = ""; $("#th-" + id).innerHTML = thumbsD(id); saveDraft();
+});
+function compress(file, max = 1100, q = 0.62) { return new Promise((res, rej) => { const r = new FileReader(); r.onload = () => { const img = new Image(); img.onload = () => { let w = img.width, h = img.height; const k = Math.min(1, max / Math.max(w, h)); w = Math.round(w * k); h = Math.round(h * k); const c = document.createElement("canvas"); c.width = w; c.height = h; c.getContext("2d").drawImage(img, 0, 0, w, h); res(c.toDataURL("image/jpeg", q)); }; img.onerror = rej; img.src = r.result; }; r.onerror = rej; r.readAsDataURL(file); }); }
+function toast(m) { const t = $("#toast"); t.textContent = m; t.hidden = false; clearTimeout(toast.t); toast.t = setTimeout(() => t.hidden = true, 3200); }
+
+// ---------- PDF ----------
+async function buildPdf() {
+  const { jsPDF } = window.jspdf; const doc = new jsPDF({ unit: "mm", format: "a4" }); const W = 210, M = 14, BR = [13, 92, 85];
+  const a = S.aud, I = S.ident, c = contagem(), dataV = (I.dataVisita || "").split("-").reverse().join("/");
+  const head = () => { doc.setFillColor(...BR); doc.rect(0, 0, W, 24, "F"); doc.setTextColor(255); doc.setFont("helvetica", "bold"); doc.setFontSize(14); doc.text("RETORNO DE QUALIDADE - COMO ESTAVA X COMO FICOU", M, 11); doc.setFont("helvetica", "normal"); doc.setFontSize(9.5); doc.text(`${a.unidade || I.unidade} - visita em ${dataV} - ${I.apoio || ""}`, M, 18); doc.setTextColor(20); return 32; };
+  let y = head();
+  doc.setFontSize(9.5); doc.text(`Gestora: ${I.gestora || "-"}    Auditoria de referência: ${a.data}${a.auditor ? " (" + a.auditor + ")" : ""}    Boas Práticas: ${fmtPct(a.bp)}${a.ef != null ? "    Estrutura Física: " + fmtPct(a.ef) : ""}`, M, y); y += 5;
+  doc.autoTable({ startY: y, head: [["Itens não conformes", "Corrigidos", "Parciais", "Pendentes", "Sem avaliação", "% corrigido"]], body: [[c.tot, c.corrigido, c.parcial, c.pendente, c.sem, (c.tot ? Math.round(c.corrigido / c.tot * 100) : 0) + "%"]],
+    styles: { fontSize: 10, halign: "center" }, headStyles: { fillColor: BR, fontSize: 8.5 }, margin: { left: M, right: M } });
+  const stCol = s => s === "corrigido" ? [31, 122, 63] : s === "parcial" ? [154, 98, 0] : s === "pendente" ? [179, 38, 30] : [110, 110, 110];
+  const PW = (W - 2 * M - 8) / 2 - 2, PH = 62;
+  const list = a.ncs.slice().sort(ordem);
+  const fotosAntes = {}; await Promise.all(list.flatMap(n => (n.fotos || []).map(f => pegarFoto(f).then(d => { if (d) (fotosAntes[n.id] = fotosAntes[n.id] || []).push(d); }))));
+  let grupo = null, body = [], meta = {};
+  const flush = () => { if (!body.length) return; const m = meta;
+    doc.autoTable({ startY: doc.lastAutoTable.finalY + 6, head: [[{ content: grupo, colSpan: 4 }], ["Item", "Como estava (auditoria)", "Situação", "Como ficou (ação)"]], body, rowPageBreak: "avoid",
+      styles: { fontSize: 7.8, cellPadding: 1.6, valign: "top" }, headStyles: { fillColor: BR }, columnStyles: { 0: { cellWidth: 58 }, 1: { cellWidth: 50 }, 2: { cellWidth: 22, fontStyle: "bold" }, 3: { cellWidth: 52 } }, margin: { left: M, right: M },
+      didParseCell: d => { if (d.section === "body" && d.column.index === 2 && !m[d.row.index]) d.cell.styles.textColor = stCol(d.cell.raw.st); if (d.section === "body" && d.column.index === 2 && d.cell.raw && d.cell.raw.content != null) d.cell.text = [d.cell.raw.content]; },
+      didDrawCell: d => { if (d.section !== "body" || d.column.index !== 0) return; const r = m[d.row.index]; if (!r) return;
+        doc.setFontSize(7); doc.setTextColor(110); doc.text("COMO ESTAVA", d.cell.x + 2, d.cell.y + 3.5); doc.text("COMO FICOU", d.cell.x + 4 + PW + 4, d.cell.y + 3.5); doc.setTextColor(20);
+        if (r.antes) { try { doc.addImage(r.antes.src, "JPEG", d.cell.x + 2, d.cell.y + 5, r.antes.w, r.antes.h); } catch (e) {} } else { doc.setFontSize(7.5); doc.setTextColor(150); doc.text("sem foto", d.cell.x + 2, d.cell.y + 10); doc.setTextColor(20); }
+        if (r.depois) { try { doc.addImage(r.depois.src, "JPEG", d.cell.x + 4 + PW + 4, d.cell.y + 5, r.depois.w, r.depois.h); } catch (e) {} } else { doc.setFontSize(7.5); doc.setTextColor(150); doc.text("sem foto", d.cell.x + 4 + PW + 4, d.cell.y + 10); doc.setTextColor(20); } } });
+    body = []; meta = {}; };
+  doc.lastAutoTable.finalY += 0;
+  const fit = src => { if (!src) return null; try { const p = doc.getImageProperties(src); const k = Math.min(PW / p.width, PH / p.height); return { src, w: p.width * k, h: p.height * k }; } catch (e) { return null; } };
+  for (const n of list) {
+    const r = ref(n.id), g = r.parte + " · " + r.bloco;
+    if (g !== grupo) { flush(); grupo = g; }
+    const st = S.st[n.id];
+    body.push([`${r.n}. ${r.texto}`, n.obs || "Sem observação.", { content: st ? ST[st].l : "Sem avaliação", st }, S.acao[n.id] || ""]);
+    const an = fotosAntes[n.id] || [], de = S.fotos[n.id] || [];
+    for (let k = 0; k < Math.max(an.length, de.length); k++) {
+      const A = fit(an[k]), D = fit(de[k]); if (!A && !D) continue;
+      meta[body.length] = { antes: A, depois: D };
+      body.push([{ content: "", colSpan: 4, styles: { minCellHeight: Math.max(A ? A.h : 8, D ? D.h : 8) + 7 } }]);
+    }
+  }
+  flush();
+  let yy = doc.lastAutoTable.finalY + 8; if (yy > 240) { doc.addPage(); yy = head(); }
+  doc.autoTable({ startY: yy, head: [["Continuidade do trabalho pela equipe", "Resposta", "Comentário"]], body: CONT_Q.map((q, i) => [q, S.cont[i] || "-", S.contObs[i] || ""]), styles: { fontSize: 8.5 }, headStyles: { fillColor: BR }, columnStyles: { 1: { cellWidth: 20, fontStyle: "bold" } }, margin: { left: M, right: M },
+    didParseCell: d => { if (d.section === "body" && d.column.index === 1) d.cell.styles.textColor = d.cell.raw === "Sim" ? [31, 122, 63] : d.cell.raw === "Parcial" ? [154, 98, 0] : d.cell.raw === "Não" ? [179, 38, 30] : [110, 110, 110]; } });
+  if (S.parecer) { yy = doc.lastAutoTable.finalY + 8; if (yy > 260) { doc.addPage(); yy = head(); } doc.setFont("helvetica", "bold"); doc.setFontSize(10); doc.text("Parecer geral", M, yy); doc.setFont("helvetica", "normal"); doc.setFontSize(9); const l = doc.splitTextToSize(S.parecer, W - 2 * M); doc.text(l, M, yy + 5); }
+  const np = doc.getNumberOfPages(); for (let i = 1; i <= np; i++) { doc.setPage(i); doc.setFontSize(7.5); doc.setTextColor(120); doc.text(`NutriSaúde · Retorno de Qualidade · página ${i}/${np}`, M, 292); }
+  const fname = `Retorno_${(a.unidade || I.unidade || "unidade").replace(/[^\wÀ-ú-]+/g, "_")}_${I.dataVisita || ""}.pdf`;
+  return { doc, fname };
+}
+
+function validar(msg) {
+  if (!S.aud) { msg.innerHTML = `<div class="msg err">Escolha a unidade e aguarde carregar a auditoria.</div>`; return false; }
+  if (!(S.ident.apoio || "").trim()) { msg.innerHTML = `<div class="msg err">Preencha o responsável pela visita.</div>`; $("#f-apoio").focus(); return false; }
+  if (!window.jspdf) { msg.innerHTML = `<div class="msg err">O gerador de PDF não carregou. Recarregue a página.</div>`; return false; }
+  return true;
+}
+$("#pdfBtn").onclick = async () => { const msg = $("#sendMsg"); if (!validar(msg)) return; const b = $("#pdfBtn"); b.disabled = true; b.textContent = "Gerando…"; try { const { doc, fname } = await buildPdf(); doc.save(fname); } finally { b.disabled = false; b.textContent = "Baixar PDF"; } };
+$("#sendBtn").onclick = async () => {
+  const msg = $("#sendMsg"), btn = $("#sendBtn"); if (!validar(msg)) return;
+  const c = contagem(); if (c.sem === c.tot && c.tot) { msg.innerHTML = `<div class="msg err">Marque a situação de pelo menos um item.</div>`; return; }
+  btn.disabled = true; btn.textContent = "Gerando PDF…";
+  const { doc, fname } = await buildPdf(); const a = S.aud, I = S.ident;
+  const f = $("#pdfSendForm"); f.action = APPS_SCRIPT_URL; const set = (n, v) => { f.elements[n].value = v; };
+  set("unidade", a.unidade || I.unidade.trim()); set("auditoriaId", a.id); set("auditoriaData", a.data); set("auditoriaNota", fmtPct(a.bp));
+  set("apoio", I.apoio); set("gestora", I.gestora); set("dataVisita", I.dataVisita);
+  set("itens", JSON.stringify(a.ncs.slice().sort(ordem).map(n => { const r = ref(n.id); return { id: n.id, status: S.st[n.id] || "", acao: S.acao[n.id] || "", bloco: r.bloco, n: r.n, texto: r.texto.slice(0, 180) }; })));
+  set("continuidade", JSON.stringify(CONT_Q.map((q, i) => ({ q, r: S.cont[i] || "", obs: S.contObs[i] || "" }))));
+  set("parecer", S.parecer || ""); set("filename", fname); set("pdfBase64", doc.output("datauristring"));
+  btn.textContent = "Enviando…";
+  let done = false; const fin = () => { if (done) return; done = true; btn.disabled = false; btn.textContent = "Enviar por e-mail (PDF)";
+    msg.innerHTML = `<div class="msg ok">Retorno enviado. ${c.corrigido} de ${c.tot} itens corrigidos (${c.tot ? Math.round(c.corrigido / c.tot * 100) : 0}%).</div><div class="actions" style="margin-top:10px"><button class="btn" id="novo">Iniciar novo retorno</button></div>`;
+    $("#novo").onclick = () => { S = blank(); saveDraft(); audU = null; fillIdent(); $("#audBox").hidden = true; render(); window.scrollTo({ top: 0 }); }; };
+  $("#hiddenSendFrame").onload = fin; setTimeout(fin, 20000); f.submit();
+};
+$("#clearBtn").onclick = e => { const b = e.target; if (b.dataset.armed) { S = blank(); saveDraft(); audU = null; fillIdent(); $("#audBox").hidden = true; render(); toast("Formulário limpo."); delete b.dataset.armed; b.textContent = "Limpar formulário"; } else { b.dataset.armed = 1; b.textContent = "Toque de novo para confirmar"; setTimeout(() => { delete b.dataset.armed; b.textContent = "Limpar formulário"; }, 4000); } };
+
+function fillIdent() { for (const k of ["unidade", "apoio", "gestora", "dataVisita"]) $("#f-" + k).value = S.ident[k] || ""; }
+fillIdent(); if (S.aud) { renderAud(); render(); } consultaAud(); updSum();
+</script>
+
+</body>
+</html>
