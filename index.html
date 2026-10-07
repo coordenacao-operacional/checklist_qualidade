@@ -387,7 +387,7 @@ function submit(){
   if(bp.answered===0&&ef.answered===0){msg.innerHTML=`<div class="msg err">Nenhum item foi avaliado ainda.</div>`;return;}
   if(!window.jspdf){msg.innerHTML=`<div class="msg err">O gerador de PDF não carregou. Verifique a internet e recarregue a página.</div>`;return;}
   const A=snapshot(); const {doc,fname}=buildPdf(A);
-  if(!APPS_SCRIPT_URL){doc.save(fname);msg.innerHTML=`<div class="msg info">O envio automático ainda não foi configurado. O PDF foi baixado; envie para paloma.miranda@nutrisaude.com.br.</div>`;return;}
+  if(!APPS_SCRIPT_URL){doc.save(fname);msg.innerHTML=`<div class="msg info">O envio automático ainda não foi configurado. O PDF foi baixado; envie para coordenacao.operacional@nutrisaude.com.br.</div>`;return;}
   btn.disabled=true;btn.textContent="Enviando…";
   const resumo=["bp","ef"].map(p=>{const R=scorePart(p);return `${PARTS[p].name}: ${fmtPct(R.pct)} (${band(R.pct).lab})\n`+PARTS[p].s.map((s,si)=>`  - ${cap(s.t)}: ${fmtPct(R.secs[si].pct)}${R.secs[si].zeroed?" ["+R.secs[si].zeroed+"]":""}`).join("\n");}).join("\n\n");
   const f=$("#pdfSendForm"); f.action=APPS_SCRIPT_URL;
