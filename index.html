@@ -170,6 +170,7 @@ table.res td.r,table.res th.r{text-align:right}
 
 <main class="wrap">
   <section class="stack" id="identCard">
+    <div class="msg info" id="jaEnviado" hidden></div>
     <div class="card">
       <div class="grid">
         <label class="f">Unidade<input type="text" id="f-unidade" list="units" autocomplete="off" placeholder="Ex.: BTG 8"></label>
@@ -347,7 +348,7 @@ function renderRes(){
   renderComite();
   $("#addM").onclick=()=>{S.comite.push({nome:"",funcao:"",sig:""});renderComite();saveDraft();};
   $("#sendBtn").onclick=submit; $("#pdfBtn").onclick=()=>downloadPdf(snapshot());
-  $("#clearBtn").onclick=e=>{const b=e.target;if(b.dataset.armed){S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();toast("Formulário limpo.");}else{b.dataset.armed=1;b.textContent="Toque de novo para confirmar";setTimeout(()=>{delete b.dataset.armed;b.textContent="Limpar formulário";},4000);}};
+  $("#clearBtn").onclick=e=>{const b=e.target;if(b.dataset.armed){S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();avisoEnviado();toast("Formulário limpo.");}else{b.dataset.armed=1;b.textContent="Toque de novo para confirmar";setTimeout(()=>{delete b.dataset.armed;b.textContent="Limpar formulário";},4000);}};
 }
 function renderComite(){
   const box=$("#comite");
@@ -384,10 +385,13 @@ function submit(){
   {const opt=[...document.querySelectorAll("#units option")].map(o=>o.value).find(v=>v.toLowerCase()===(I.unidade||"").trim().toLowerCase());if(opt){I.unidade=opt;$("#f-unidade").value=opt;}}
   if(!I.unidade.trim()||!I.mes){msg.innerHTML=`<div class="msg err">Preencha a unidade e o mês/ano antes de enviar.</div>`;window.scrollTo({top:0,behavior:"smooth"});$("#f-unidade").focus();return;}
   const bp=scorePart("bp"),ef=scorePart("ef");
+  if(S.enviadoEm&&!submit.confirmado){const d=new Date(S.enviadoEm);msg.innerHTML=`<div class="msg err">Esta auditoria já foi enviada em ${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}. Para uma nova visita, toque em “Iniciar nova auditoria”. Só reenvie se precisar corrigir algo.</div><div class="actions" style="margin-top:10px"><button class="btn" id="newA2">Iniciar nova auditoria</button><button class="btn sec2" id="reenv">Reenviar mesmo assim</button></div>`;
+    $("#newA2").onclick=novaAuditoria;$("#reenv").onclick=()=>{submit.confirmado=true;submit();};return;}
+  submit.confirmado=false;
   if(bp.answered===0&&ef.answered===0){msg.innerHTML=`<div class="msg err">Nenhum item foi avaliado ainda.</div>`;return;}
   if(!window.jspdf){msg.innerHTML=`<div class="msg err">O gerador de PDF não carregou. Verifique a internet e recarregue a página.</div>`;return;}
   const A=snapshot(); const {doc,fname}=buildPdf(A);
-  if(!APPS_SCRIPT_URL){doc.save(fname);msg.innerHTML=`<div class="msg info">O envio automático ainda não foi configurado. O PDF foi baixado; envie para coordenacao.operacional@nutrisaude.com.br.</div>`;return;}
+  if(!APPS_SCRIPT_URL){doc.save(fname);msg.innerHTML=`<div class="msg info">O envio automático ainda não foi configurado. O PDF foi baixado; envie para paloma.miranda@nutrisaude.com.br.</div>`;return;}
   btn.disabled=true;btn.textContent="Enviando…";
   const resumo=["bp","ef"].map(p=>{const R=scorePart(p);return `${PARTS[p].name}: ${fmtPct(R.pct)} (${band(R.pct).lab})\n`+PARTS[p].s.map((s,si)=>`  - ${cap(s.t)}: ${fmtPct(R.secs[si].pct)}${R.secs[si].zeroed?" ["+R.secs[si].zeroed+"]":""}`).join("\n");}).join("\n\n");
   const f=$("#pdfSendForm"); f.action=APPS_SCRIPT_URL;
@@ -404,9 +408,9 @@ function submit(){
   {const fn={};Object.keys(S.ans).filter(id=>S.ans[id]===0&&(S.fotos[id]||[]).length).forEach(id=>fn[id]=S.fotos[id].slice(0,3));set("fotosNC",JSON.stringify(fn));}
   set("obsGeral",S.obsGeral||"");set("filename",fname);set("pdfBase64",doc.output("datauristring"));
   let done=false; const fr=$("#hiddenSendFrame");
-  const finish=()=>{if(done)return;done=true;btn.disabled=false;btn.textContent="Enviar por e-mail (PDF)";
+  const finish=()=>{if(done)return;done=true;btn.disabled=false;btn.textContent="Enviar por e-mail (PDF)";S.enviadoEm=new Date().toISOString();saveDraft();avisoEnviado();
     msg.innerHTML=`<div class="msg ok">Checklist enviado para a coordenação. Resultado BP ${fmtPct(bp.pct)} · EF ${fmtPct(ef.pct)}.</div><div class="actions" style="margin-top:10px"><button class="btn" id="newA">Iniciar nova auditoria</button></div>`;
-    $("#newA").onclick=()=>{S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();};};
+    $("#newA").onclick=novaAuditoria;};
   fr.onload=finish; setTimeout(finish,15000);
   f.submit();
 }
@@ -503,9 +507,14 @@ function consultaReinc(){
     consultaReinc.tentou=false;R={erro:true};reincU=null;applyReinc();});
 }
 
+function novaAuditoria(){S=blank();saveDraft();fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();avisoEnviado();$("#sendMsg")&&($("#sendMsg").innerHTML="");}
+function avisoEnviado(){const el=$("#jaEnviado");if(!S.enviadoEm){el.hidden=true;return;}const d=new Date(S.enviadoEm);
+  el.hidden=false;el.innerHTML=`<strong>Esta auditoria já foi enviada</strong> em ${d.toLocaleDateString("pt-BR")} às ${d.toLocaleTimeString("pt-BR",{hour:"2-digit",minute:"2-digit"})}. Para registrar uma nova visita, <button class="link" id="novaTop">inicie uma nova auditoria</button>.`;
+  $("#novaTop").onclick=novaAuditoria;}
+
 // ---------- boot ----------
 function fillIdent(){for(const k of ["unidade","gestor","mes","auditor"])$("#f-"+k).value=S.ident[k]||"";}
-fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();
+fillIdent();renderPart("bp");renderPart("ef");updTop();go("bp");consultaReinc();avisoEnviado();
 </script>
 
 </body>
